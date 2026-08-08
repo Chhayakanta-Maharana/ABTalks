@@ -184,19 +184,19 @@ export default function Hero() {
           {/* CTA Buttons */}
           <div className="hero-cta-group flex flex-wrap items-center gap-5">
             <Link
-              href="#challenge"
+              href="/dashboard"
               data-magnetic="true"
               className="px-8 py-4 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1E40AF)] text-white font-bold text-sm tracking-wider uppercase shadow-[0_0_35px_rgba(37,99,235,0.4)] hover:shadow-[0_0_50px_rgba(59,130,246,0.6)] hover:scale-[1.02] transition-all duration-300 flex items-center gap-2"
             >
-              <span>START DAY 01 NOW</span>
+              <span>OPEN STUDENT DASHBOARD</span>
               <Zap className="w-4 h-4 fill-current" />
             </Link>
 
             <Link
-              href="#loop"
+              href="/day/12"
               className="px-8 py-4 rounded-xl border border-[rgba(148,163,184,0.18)] bg-[#07111F]/60 text-[#F8FAFC] font-semibold text-sm tracking-wide hover:border-[#3B82F6]/50 hover:bg-[#0B1F3A]/80 transition-all duration-300 backdrop-blur-md"
             >
-              EXPLORE METHODOLOGY ↓
+              TRY DAY 12 WORKSPACE →
             </Link>
           </div>
         </div>
