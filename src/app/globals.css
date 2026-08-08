@@ -59,11 +59,18 @@ html.lenis, html.lenis body {
   background: rgba(7, 17, 31, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.15) !important;
+  border: none !important;
+  border-bottom: none !important;
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
   outline: none !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.9) !important;
+}
+
+header, header *, nav, nav * {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .navy-card {

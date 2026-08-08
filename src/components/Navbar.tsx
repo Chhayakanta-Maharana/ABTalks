@@ -68,14 +68,14 @@ export default function Navbar() {
     pathname === "/dashboard"
       ? "dashboard"
       : pathname?.startsWith("/day")
-      ? "day12"
-      : activeSection;
+        ? "day12"
+        : activeSection;
 
   const getLinkStyle = (key: string) => {
     const isActive = currentActive === key;
-    return `nav-item text-xs tracking-wider transition-all px-3.5 py-1.5 rounded-lg cursor-pointer ${
+    return `nav-item text-xs tracking-wider transition-all px-3.5 py-1.5 rounded-lg cursor-pointer outline-none focus:outline-none border-0 ${
       isActive
-        ? "bg-[#3B82F6]/20 text-[#3B82F6] font-bold border border-[#3B82F6]/40 shadow-[0_0_15px_rgba(59,130,246,0.3)] scale-105"
+        ? "bg-[#3B82F6]/25 text-[#3B82F6] font-bold shadow-[0_0_15px_rgba(59,130,246,0.25)] scale-105"
         : "text-[#94A3B8] font-semibold hover:text-[#F8FAFC] hover:bg-slate-900/60"
     }`;
   };
@@ -93,7 +93,7 @@ export default function Navbar() {
   return (
     <header
       ref={navRef}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 outline-none focus:outline-none border-none ${
         isScrolled
           ? "py-3 navbar-glass shadow-[0_10px_30px_rgba(0,0,0,0.6)]"
           : "py-6 bg-transparent"
@@ -116,12 +116,6 @@ export default function Navbar() {
         <nav className="hidden md:flex items-center gap-2">
           <Link href="/" className={getLinkStyle("home")}>
             HOME
-          </Link>
-          <Link href="/dashboard" className={getLinkStyle("dashboard")}>
-            DASHBOARD
-          </Link>
-          <Link href="/day/12" className={getLinkStyle("day12")}>
-            DAY 12 TASK
           </Link>
           {pathname === "/" ? (
             <button
@@ -152,11 +146,11 @@ export default function Navbar() {
         {/* CTA & Mobile Toggle */}
         <div className="nav-item flex items-center gap-3">
           <Link
-            href="/dashboard"
+            href="/login"
             data-magnetic="true"
             className="relative group overflow-hidden px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all duration-300 flex items-center gap-1.5"
           >
-            <span className="relative z-10">DASHBOARD</span>
+            <span className="relative z-10">LOGIN</span>
             <ArrowUpRight className="w-3.5 h-3.5 relative z-10 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             <div className="absolute inset-0 bg-[linear-gradient(135deg,#3B82F6,#2563EB)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </Link>

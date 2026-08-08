@@ -109,7 +109,7 @@ export default function ChallengeDayPage() {
       <AtmosphericBackground />
 
       {/* Top Mobile Nav Header */}
-      <header className="sticky top-0 z-40 bg-[#07111F]/80 backdrop-blur-xl border-b border-[rgba(148,163,184,0.12)] px-4 py-3 sm:px-8">
+      <header className="sticky top-0 z-40 bg-[#07111F]/90 backdrop-blur-xl border-b border-slate-800/80 outline-none px-4 py-3 sm:px-8">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
