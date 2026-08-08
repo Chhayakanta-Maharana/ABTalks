@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import {
   Flame,
@@ -43,14 +44,14 @@ import {
 import AtmosphericBackground from "@/components/AtmosphericBackground";
 
 const GithubIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={className} width={16} height={16} style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
     <path d="M9 18c-4.51 2-5-2-7-2" />
   </svg>
 );
 
 const LinkedinIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={className} width={16} height={16} style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
     <rect width="4" height="12" x="2" y="9" />
     <circle cx="4" cy="4" r="2" />
@@ -81,8 +82,19 @@ const generateUsernameFromName = (name: string): string => {
 };
 
 export default function StudentDashboard() {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Authentication Protection Check
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+      if (!loggedIn) {
+        router.push("/login");
+      }
+    }
+  }, [router]);
 
   // Edge Case Simulator State
   const [simulationMode, setSimulationMode] = useState<"standard" | "day0" | "missed" | "empty">("standard");
@@ -125,8 +137,8 @@ export default function StudentDashboard() {
     "act-3": 24,
   });
 
-  // Selected Day Tile State (Default set to Day 2 as in wireframe sketch)
-  const [selectedDayNum, setSelectedDayNum] = useState<number>(2);
+  // Selected Day Tile State (Default set to Day 1)
+  const [selectedDayNum, setSelectedDayNum] = useState<number>(1);
 
   // Selected Graph Day Dot State & Hover Tooltip State & Graph Phase State (1 = Days 1-30, 2 = Days 31-60)
   const [selectedGraphDay, setSelectedGraphDay] = useState<number>(1);
@@ -232,6 +244,58 @@ export default function StudentDashboard() {
     return () => ctx.revert();
   }, []);
 
+  // Fetch Database User Profile and Activity Feed
+  const [dbUserStats, setDbUserStats] = useState<{
+    completedDays?: number;
+    currentStreak?: number;
+    standingRank?: string;
+  }>({});
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+        const token = localStorage.getItem("authToken");
+        const res = await fetch(`${API_BASE}/user/profile`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data = await res.json();
+        if (data.user) {
+          let parsedStack = ["Next.js", "TypeScript", "Golang", "Neon PostgreSQL"];
+          try {
+            if (typeof data.user.techStack === "string") {
+              parsedStack = JSON.parse(data.user.techStack);
+            } else if (Array.isArray(data.user.techStack)) {
+              parsedStack = data.user.techStack;
+            }
+          } catch {}
+
+          const loadedProfile = {
+            name: data.user.name || INITIAL_STUDENT_PROFILE.name,
+            track: data.user.track || INITIAL_STUDENT_PROFILE.track,
+            avatar: data.user.avatar || INITIAL_STUDENT_PROFILE.avatar,
+            githubHandle: data.user.githubHandle || "",
+            linkedinHandle: data.user.linkedinHandle || "",
+            thought: data.user.thought || "Building 60 AI & Web systems in 60 days. Staying consistent every single day! 🚀",
+            techStack: parsedStack,
+          };
+
+          setCustomProfile(loadedProfile);
+          setTempProfile(loadedProfile);
+          setDbUserStats({
+            completedDays: data.user.completedDays,
+            currentStreak: data.user.currentStreak,
+            standingRank: data.user.standingRank,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load user from Neon PostgreSQL database:", err);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
   // Dynamic Profile Data based on simulation mode & custom profile
   const profile: StudentProfile = {
     ...INITIAL_STUDENT_PROFILE,
@@ -242,26 +306,180 @@ export default function StudentDashboard() {
     githubHandle: simulationMode === "empty" ? "" : customProfile.githubHandle,
     linkedinHandle: simulationMode === "empty" ? "" : customProfile.linkedinHandle,
     currentStreak:
-      simulationMode === "day0" ? 0 : simulationMode === "missed" ? 0 : INITIAL_STUDENT_PROFILE.currentStreak,
+      simulationMode === "day0"
+        ? 0
+        : simulationMode === "missed"
+        ? 0
+        : dbUserStats.currentStreak ?? INITIAL_STUDENT_PROFILE.currentStreak,
     completedDays:
-      simulationMode === "day0" ? 0 : simulationMode === "missed" ? 10 : INITIAL_STUDENT_PROFILE.completedDays,
+      simulationMode === "day0"
+        ? 0
+        : simulationMode === "missed"
+        ? 10
+        : dbUserStats.completedDays ?? INITIAL_STUDENT_PROFILE.completedDays,
     standingRank:
       simulationMode === "day0"
         ? "New Contender"
         : simulationMode === "empty"
-          ? "Setup Pending"
-          : INITIAL_STUDENT_PROFILE.standingRank,
+        ? "Setup Pending"
+        : dbUserStats.standingRank ?? INITIAL_STUDENT_PROFILE.standingRank,
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setCustomProfile({ ...tempProfile });
     setIsEditModalOpen(false);
+
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+      const token = localStorage.getItem("authToken");
+      await fetch(`${API_BASE}/user/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(tempProfile),
+      });
+    } catch (err) {
+      console.error("Failed to save profile to Neon PostgreSQL database:", err);
+    }
   };
 
   const handleReactionClick = (id: string) => {
     setReactions((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
   };
+
+  // Calculate real-time active calendar day automatically from user registration timestamp
+  const getRealCalendarDay = () => {
+    if (typeof window !== "undefined") {
+      let startDateStr = localStorage.getItem("challengeStartDate");
+      if (!startDateStr) {
+        startDateStr = new Date().toISOString();
+        localStorage.setItem("challengeStartDate", startDateStr);
+      }
+      const start = new Date(startDateStr).getTime();
+      const now = new Date().getTime();
+      const diffDays = Math.floor((now - start) / (1000 * 60 * 60 * 24)) + 1;
+      return Math.min(Math.max(diffDays, 1), 60);
+    }
+    return 1;
+  };
+
+  const activeDayNumber = getRealCalendarDay();
+
+  // Task Details Lookup
+  const getDayTaskInfo = (dayNum: number) => {
+    if (dayNum === 1) {
+      return {
+        title: "Build & Deploy Personal Developer Portfolio",
+        requirements: [
+          "Set up Next.js App Router repository with Tailwind CSS styling",
+          "Deploy live site to Vercel/Netlify with custom domain",
+          "Push initial clean commit to public GitHub repository",
+          "Share Day 1 proof post on LinkedIn with #ABTalks hashtag",
+        ],
+      };
+    } else if (dayNum === 2) {
+      return {
+        title: "Design System & CSS Component Tokens",
+        requirements: [
+          "Define CSS color variables for primary, secondary, and surface accents",
+          "Create reusable Card, Button, and Badge React components",
+          "Implement responsive layout container wrapper with padding breakpoints",
+          "Publish design system storybook or documentation page",
+        ],
+      };
+    } else if (dayNum === 3) {
+      return {
+        title: "Responsive Navigation & Mobile Drawer System",
+        requirements: [
+          "Construct sticky top navigation header with blur backdrop effect",
+          "Implement accessible mobile slide-over navigation drawer",
+          "Add smooth page transition links and active route highlight indicators",
+        ],
+      };
+    } else if (dayNum === 12) {
+      return {
+        title: MOCK_DAY_12_TASK.title,
+        requirements: MOCK_DAY_12_TASK.requirements,
+      };
+    } else {
+      return {
+        title: `Day ${dayNum}: Build Challenge System`,
+        requirements: [
+          `Implement main functional features for Day ${dayNum} engineering challenge`,
+          "Ensure full responsive layout scaling across mobile and desktop viewports",
+          "Commit clean code to public GitHub repository with descriptive commit message",
+          `Post public proof update on LinkedIn highlighting Day ${dayNum} build learnings`,
+        ],
+      };
+    }
+  };
+
+  // Date-Based Unified Status Generator for Any Day Number
+  const getDayStatus = (d: number) => {
+    const isSubmitted = d <= profile.completedDays;
+    const isToday = d === activeDayNumber;
+    const isPast = d < activeDayNumber;
+    const taskInfo = getDayTaskInfo(d);
+
+    if (isSubmitted) {
+      return {
+        status: "completed",
+        pct: 100,
+        label: "100% Verified Completed",
+        badgeText: "Completed & Verified",
+        badgeColor: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30",
+        pillarColor: "bg-[linear-gradient(180deg,#10B981,#059669)]",
+        gridBg: "bg-emerald-500 text-slate-950 border border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.4)]",
+        dotColor: "#2563EB",
+        name: taskInfo.title,
+        requirements: taskInfo.requirements,
+      };
+    } else if (isToday) {
+      return {
+        status: "in_progress",
+        pct: 0,
+        label: "In Progress Today",
+        badgeText: "Active Build Today",
+        badgeColor: "text-[#3B82F6] bg-[#3B82F6]/20 border-[#3B82F6]/30",
+        pillarColor: "bg-[linear-gradient(180deg,#34D399,#10B981)] animate-pulse",
+        gridBg: "bg-[#2563EB] text-white border-2 border-[#60A5FA] shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-pulse font-black scale-105",
+        dotColor: "#3B82F6",
+        name: taskInfo.title,
+        requirements: taskInfo.requirements,
+      };
+    } else if (isPast) {
+      return {
+        status: "missed",
+        pct: 0,
+        label: "0% Missed Submission",
+        badgeText: "Missed Submission",
+        badgeColor: "text-rose-400 bg-rose-500/15 border-rose-500/30",
+        pillarColor: "bg-rose-950/40 border border-rose-500/40",
+        gridBg: "bg-rose-950/60 text-rose-400 border border-rose-500/50 hover:bg-rose-900/60",
+        dotColor: "#F43F5E",
+        name: taskInfo.title,
+        requirements: taskInfo.requirements,
+      };
+    } else {
+      return {
+        status: "locked",
+        pct: 0,
+        label: "0% Locked (Upcoming)",
+        badgeText: "Locked Build",
+        badgeColor: "text-slate-500 bg-slate-800 border-slate-700",
+        pillarColor: "bg-transparent",
+        gridBg: "bg-[#07111F] text-slate-700 border border-slate-800/80 hover:border-slate-700",
+        dotColor: "#030712",
+        name: taskInfo.title,
+        requirements: taskInfo.requirements,
+      };
+    }
+  };
+
+  const currentTodayTask = getDayTaskInfo(activeDayNumber);
 
   return (
     <div ref={containerRef} className="min-h-screen bg-[#030712] text-[#F8FAFC] pb-24 font-sans selection:bg-[#3B82F6]/30">
@@ -281,10 +499,10 @@ export default function StudentDashboard() {
 
           <div className="flex items-center gap-3">
             <Link
-              href="/day/12"
+              href={`/day/${activeDayNumber}`}
               className="px-3.5 py-1.5 rounded-lg bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase flex items-center gap-1 shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:scale-105 transition-all"
             >
-              <span>DAY 12 TASK</span>
+              <span>DAY {activeDayNumber} TASK</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
 
@@ -302,13 +520,13 @@ export default function StudentDashboard() {
       <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-8 pt-6 space-y-6">
 
         {/* Missed Day Alert Notification */}
-        {simulationMode === "missed" && (
+        {activeDayNumber > 1 && profile.completedDays < activeDayNumber - 1 && (
           <div className="rounded-2xl p-4 bg-red-950/40 border border-red-500/30 flex items-start gap-3.5 shadow-lg animate-pulse">
             <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h4 className="text-sm font-bold text-red-200">Streak at Risk! You missed yesterday&apos;s build.</h4>
+              <h4 className="text-sm font-bold text-red-200">Streak Alert! Missed submissions detected for past days.</h4>
               <p className="text-xs text-red-300/80 leading-relaxed">
-                Submit today&apos;s build before 11:59 PM IST to activate your Streak Freeze shield and maintain your cohort standing.
+                Submit today&apos;s Day {activeDayNumber} build before 11:59 PM IST to keep your active streak going.
               </p>
             </div>
           </div>
@@ -345,7 +563,7 @@ export default function StudentDashboard() {
                   <span>Upload</span>
                 </div>
                 <span className="absolute -bottom-1 -right-1 bg-[#3B82F6] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-900">
-                  Lvl 12
+                  Lvl {activeDayNumber}
                 </span>
               </div>
 
@@ -359,8 +577,6 @@ export default function StudentDashboard() {
                 <p className="text-xs text-slate-400">{profile.track}</p>
               </div>
             </div>
-
-
 
             {/* Tech Stack Badges Section */}
             <div className="space-y-1.5">
@@ -412,21 +628,15 @@ export default function StudentDashboard() {
                 <div className="grid grid-cols-10 gap-1.5 pt-1">
                   {Array.from({ length: 30 }).map((_, idx) => {
                     const dayNum = idx + 1;
-                    const isCompleted = dayNum <= profile.completedDays;
-                    const isCurrent = dayNum === 12;
+                    const status = getDayStatus(dayNum);
 
                     return (
                       <div
                         key={dayNum}
-                        title={`Day ${dayNum}: ${isCompleted ? "Completed (Green)" : isCurrent ? "Active Build Today" : "Locked"}`}
-                        className={`aspect-square rounded-md flex items-center justify-center text-[9px] font-bold font-mono transition-all cursor-pointer ${isCompleted
-                            ? "bg-emerald-500 text-slate-950 border border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.4)]"
-                            : isCurrent
-                              ? "bg-emerald-400 text-slate-950 border-2 border-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.8)] animate-pulse"
-                              : "bg-[#07111F] text-slate-700 border border-slate-800/80 hover:border-slate-700"
-                          }`}
+                        title={`Day ${dayNum}: ${status.label}`}
+                        className={`aspect-square rounded-md flex items-center justify-center text-[9px] font-bold font-mono transition-all cursor-pointer ${status.gridBg}`}
                       >
-                        {isCompleted ? "✓" : dayNum}
+                        {status.status === "completed" ? "✓" : dayNum}
                       </div>
                     );
                   })}
@@ -448,11 +658,12 @@ export default function StudentDashboard() {
                 <div className="grid grid-cols-10 gap-1.5 pt-1">
                   {Array.from({ length: 30 }).map((_, idx) => {
                     const dayNum = idx + 31;
+                    const status = getDayStatus(dayNum);
                     return (
                       <div
                         key={dayNum}
-                        title={`Day ${dayNum}: Phase 2 Locked`}
-                        className="aspect-square rounded-md bg-[#07111F]/50 text-slate-700 border border-slate-800/60 flex items-center justify-center text-[9px] font-mono cursor-not-allowed opacity-60"
+                        title={`Day ${dayNum}: ${status.label}`}
+                        className={`aspect-square rounded-md flex items-center justify-center text-[9px] font-mono cursor-not-allowed opacity-60 ${status.gridBg}`}
                       >
                         {dayNum}
                       </div>
@@ -466,8 +677,8 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            {/* Bottom Row: @ mail, github, linkedin */}
-            <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+            {/* Social Handles */}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs border-t border-slate-800/80 pt-3">
               <div className="flex items-center gap-1.5 text-slate-300">
                 <Mail className="w-3.5 h-3.5 text-[#3B82F6]" />
                 <span>developer@abtalks.com</span>
@@ -493,21 +704,21 @@ export default function StudentDashboard() {
             <div className="space-y-3 max-w-2xl">
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-1 rounded-md bg-[#2563EB]/20 border border-[#3B82F6]/30 text-[#3B82F6] text-[11px] font-bold tracking-wider uppercase">
-                  TODAY TASK — DAY 12
+                  TODAY TASK — DAY {activeDayNumber}
                 </span>
                 <span className="flex items-center gap-1 text-[11px] text-slate-400">
                   <Clock className="w-3 h-3 text-slate-400" />
-                  Due in 7h 24m
+                  Due Today
                 </span>
               </div>
 
               <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">
-                {MOCK_DAY_12_TASK.title}
+                {currentTodayTask.title}
               </h2>
 
               {/* Requirements Bullets as shown in wireframe */}
               <ul className="space-y-1.5 text-xs text-slate-300 pt-1">
-                {MOCK_DAY_12_TASK.requirements.map((req, idx) => (
+                {currentTodayTask.requirements.map((req, idx) => (
                   <li key={idx} className="flex items-start gap-2">
                     <span className="text-[#3B82F6] font-bold mt-0.5">•</span>
                     <span>{req}</span>
@@ -529,10 +740,10 @@ export default function StudentDashboard() {
               </div>
 
               <Link
-                href="/day/12"
+                href={`/day/${activeDayNumber}`}
                 className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(37,99,235,0.4)] hover:shadow-[0_0_35px_rgba(59,130,246,0.6)] hover:scale-[1.02] transition-all"
               >
-                <span>OPEN WORKSPACE</span>
+                <span>OPEN DAY {activeDayNumber} TASK</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -621,23 +832,17 @@ export default function StudentDashboard() {
 
               {/* SVG Phase Progress Path Points (30 Days per Phase) */}
               {(() => {
-                const phase1Scores: { [key: number]: { pct: number; name: string } } = {
-                  1: { pct: 95, name: "Landing Hero & Brand Identity System" },
-                  2: { pct: 90, name: "Component Library & CSS Tokens System" },
-                  3: { pct: 98, name: "Responsive Navigation & Mobile Drawer" },
-                  4: { pct: 85, name: "Grid Architecture & Card Layouts" },
-                  5: { pct: 100, name: "Dark Theme Design System & HSL Tokens" },
-                  6: { pct: 92, name: "Interactive Canvas & Animation Engine" },
-                  7: { pct: 88, name: "Form Validation & Error States" },
-                  8: { pct: 95, name: "Dynamic Activity Feed & Reaction Handlers" },
-                  9: { pct: 90, name: "State Persistence & Local StorageSync" },
-                  10: { pct: 97, name: "Authentication Modal & Form Cleanups" },
-                  11: { pct: 92, name: "Public Proof Verification Pipeline" },
-                  12: { pct: 60, name: "Responsive Student Dashboard Layout" },
+                const getDynamicDayScore = (d: number) => {
+                  const status = getDayStatus(d);
+                  return {
+                    pct: status.pct,
+                    name: status.name,
+                    label: status.label,
+                    dotColor: status.dotColor,
+                  };
                 };
 
                 const startDay = graphPhase === 1 ? 1 : 31;
-                const endDay = graphPhase === 1 ? 30 : 60;
                 const daysInPhase = Array.from({ length: 30 }, (_, i) => startDay + i);
 
                 const getCoords = (d: number, pct: number) => {
@@ -648,9 +853,9 @@ export default function StudentDashboard() {
                 };
 
                 const points = daysInPhase.map((d) => {
-                  const scoreInfo = graphPhase === 1 ? phase1Scores[d] : null;
-                  const percent = scoreInfo ? scoreInfo.pct : 0;
-                  const title = scoreInfo ? scoreInfo.name : `Day ${d} Upcoming Challenge`;
+                  const scoreInfo = getDynamicDayScore(d);
+                  const percent = scoreInfo.pct;
+                  const title = scoreInfo.name;
                   const { cx, cy } = getCoords(d, percent);
                   return { day: d, percent, title, cx, cy };
                 });
@@ -717,21 +922,18 @@ export default function StudentDashboard() {
 
             {/* Floating Hover Tooltip Card */}
             {hoveredGraphDay !== null && (() => {
-              const phase1Scores: { [key: number]: { pct: number; name: string } } = {
-                1: { pct: 95, name: "Landing Hero & Brand Identity System" },
-                2: { pct: 90, name: "Component Library & CSS Tokens" },
-                3: { pct: 98, name: "Responsive Navigation & Drawer" },
-                4: { pct: 85, name: "Grid Architecture & Card Layouts" },
-                5: { pct: 100, name: "Dark Theme Design System" },
-                6: { pct: 92, name: "Interactive Canvas & Animation Engine" },
-                7: { pct: 88, name: "Form Validation & Error States" },
-                8: { pct: 95, name: "Dynamic Activity Feed & Reactions" },
-                9: { pct: 90, name: "State Persistence & StorageSync" },
-                10: { pct: 97, name: "Authentication Modal Cleanups" },
-                11: { pct: 92, name: "Public Proof Verification Pipeline" },
-                12: { pct: 60, name: "Responsive Student Dashboard Layout" },
+              const getDynamicDayScore = (d: number) => {
+                const isCompleted = d <= profile.completedDays;
+                const isCurrent = d === activeDayNumber;
+                if (isCompleted) {
+                  return { pct: 100, name: d === 1 ? "Build & Deploy Personal Developer Portfolio" : `Day ${d}: Build Completed` };
+                } else if (isCurrent) {
+                  return { pct: 0, name: d === 1 ? "Build & Deploy Personal Developer Portfolio" : `Day ${d}: Active Build Today` };
+                } else {
+                  return { pct: 0, name: `Day ${d}: Locked Challenge` };
+                }
               };
-              const info = phase1Scores[hoveredGraphDay] || { pct: 0, name: `Day ${hoveredGraphDay} Challenge` };
+              const info = getDynamicDayScore(hoveredGraphDay);
               const startDay = graphPhase === 1 ? 1 : 31;
               const dayOffset = hoveredGraphDay - startDay;
               const leftPos = Math.min(Math.max((dayOffset / 29) * 88 + 6, 8), 90);
@@ -779,22 +981,19 @@ export default function StudentDashboard() {
 
           {/* Clean Selected Day Inspector Strip - ONLY Day No, Day Task & Percentage Completed */}
           {(() => {
-            const phase1Scores: { [key: number]: { pct: number; name: string } } = {
-              1: { pct: 95, name: "Landing Hero & Brand Identity System" },
-              2: { pct: 90, name: "Component Library & CSS Tokens System" },
-              3: { pct: 98, name: "Responsive Navigation & Mobile Drawer" },
-              4: { pct: 85, name: "Grid Architecture & Card Layouts" },
-              5: { pct: 100, name: "Dark Theme Design System & HSL Tokens" },
-              6: { pct: 92, name: "Interactive Canvas & Animation Engine" },
-              7: { pct: 88, name: "Form Validation & Error States" },
-              8: { pct: 95, name: "Dynamic Activity Feed & Reaction Handlers" },
-              9: { pct: 90, name: "State Persistence & Local StorageSync" },
-              10: { pct: 97, name: "Authentication Modal & Form Cleanups" },
-              11: { pct: 92, name: "Public Proof Verification Pipeline" },
-              12: { pct: 60, name: "Responsive Student Dashboard Layout" },
+            const getDynamicDayScore = (d: number) => {
+              const isCompleted = d <= profile.completedDays;
+              const isCurrent = d === activeDayNumber;
+              if (isCompleted) {
+                return { pct: 100, name: d === 1 ? "Build & Deploy Personal Developer Portfolio" : `Day ${d}: Build Completed` };
+              } else if (isCurrent) {
+                return { pct: 0, name: d === 1 ? "Build & Deploy Personal Developer Portfolio" : `Day ${d}: Active Build Today` };
+              } else {
+                return { pct: 0, name: `Day ${d}: Locked Challenge` };
+              }
             };
 
-            const info = phase1Scores[selectedGraphDay] || { pct: 0, name: `Day ${selectedGraphDay}: Build Challenge` };
+            const info = getDynamicDayScore(selectedGraphDay);
 
             return (
               <div className="pt-4 border-t border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#030712]/50 p-4 rounded-xl border border-slate-800/80">
@@ -805,7 +1004,7 @@ export default function StudentDashboard() {
                   <div>
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">DAY TASK</span>
                     <h4 className="text-sm sm:text-base font-bold text-white leading-snug">
-                      Day {selectedGraphDay}: {info.name}
+                      {info.name}
                     </h4>
                   </div>
                 </div>
@@ -874,66 +1073,81 @@ export default function StudentDashboard() {
           {/* TOP PART: 30 Equal Vertical Pillar Progress Bars for Active Phase */}
           <div className="bg-[#030712]/90 p-4 rounded-xl border border-slate-800">
             <div className="flex items-end justify-between gap-1 sm:gap-2 w-full h-40 pt-6 pb-2 px-1">
-              {(activePillarPhase === 1 ? MOCK_PILLAR_DATA.slice(0, 30) : MOCK_PILLAR_DATA.slice(30, 60)).map((item) => {
-                const isSelected = selectedDayNum === item.day;
-                const isCompleted = item.status === "completed";
-                const isActive = item.status === "active";
+              {(() => {
+                const dynamicPillarData = Array.from({ length: 60 }).map((_, i) => {
+                  const day = i + 1;
+                  const isCompleted = day <= profile.completedDays;
+                  const isCurrent = day === activeDayNumber;
+                  if (isCompleted) {
+                    return { day, fill: 100, status: "completed" };
+                  } else if (isCurrent) {
+                    return { day, fill: 40, status: "active" };
+                  } else {
+                    return { day, fill: 0, status: "locked" };
+                  }
+                });
 
-                return (
-                  <button
-                    key={item.day}
-                    onClick={() => setSelectedDayNum(item.day)}
-                    className="flex-1 flex flex-col items-center justify-end h-full group relative focus:outline-none min-w-0"
-                  >
-                    {/* Fill percentage label on hover / top */}
-                    <span className="text-[8px] sm:text-[9px] font-mono text-slate-400 mb-1 font-bold truncate">
-                      {isCompleted ? `${item.fill}%` : isActive ? "60%" : ""}
-                    </span>
+                return (activePillarPhase === 1 ? dynamicPillarData.slice(0, 30) : dynamicPillarData.slice(30, 60)).map((item) => {
+                  const isSelected = selectedDayNum === item.day;
+                  const isCompleted = item.status === "completed";
+                  const isActive = item.status === "active";
 
-                    {/* Outer Vertical Pillar Bar (Equal Size across all 30 bars) */}
-                    <div
-                      className={`w-full max-w-[22px] rounded-t-md bg-slate-900 border overflow-hidden relative flex flex-col justify-end transition-all ${isSelected
-                          ? "border-white ring-2 ring-white scale-105"
-                          : isActive
-                            ? "border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.6)]"
-                            : isCompleted
-                              ? "border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)] hover:border-emerald-400"
-                              : "border-slate-800 opacity-40"
-                        }`}
-                      style={{ height: "100px" }}
+                  return (
+                    <button
+                      key={item.day}
+                      onClick={() => setSelectedDayNum(item.day)}
+                      className="flex-1 flex flex-col items-center justify-end h-full group relative focus:outline-none min-w-0"
                     >
-                      {/* Vertical Fill Height in GitHub Emerald Green */}
+                      {/* Fill percentage label on hover / top */}
+                      <span className="text-[8px] sm:text-[9px] font-mono text-slate-400 mb-1 font-bold truncate">
+                        {isCompleted ? `${item.fill}%` : isActive ? "Active" : ""}
+                      </span>
+
+                      {/* Outer Vertical Pillar Bar */}
                       <div
-                        className={`w-full rounded-t-xs transition-all duration-500 ${isActive
-                            ? "bg-[linear-gradient(180deg,#34D399,#10B981)] animate-pulse"
-                            : isCompleted
-                              ? "bg-[linear-gradient(180deg,#10B981,#059669)]" // Vibrant GitHub Green
-                              : "bg-transparent"
+                        className={`w-full max-w-[22px] rounded-t-md bg-slate-900 border overflow-hidden relative flex flex-col justify-end transition-all ${isSelected
+                            ? "border-white ring-2 ring-white scale-105"
+                            : isActive
+                              ? "border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.6)]"
+                              : isCompleted
+                                ? "border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)] hover:border-emerald-400"
+                                : "border-slate-800 opacity-40"
                           }`}
-                        style={{ height: `${item.fill}%` }}
-                      />
-                    </div>
+                        style={{ height: "100px" }}
+                      >
+                        {/* Vertical Fill Height in GitHub Emerald Green */}
+                        <div
+                          className={`w-full rounded-t-xs transition-all duration-500 ${isActive
+                              ? "bg-[linear-gradient(180deg,#34D399,#10B981)] animate-pulse"
+                              : isCompleted
+                                ? "bg-[linear-gradient(180deg,#10B981,#059669)]"
+                                : "bg-transparent"
+                            }`}
+                          style={{ height: `${item.fill}%` }}
+                        />
+                      </div>
 
-                    {/* Day Number Label (1..30 or 31..60) */}
-                    <span
-                      className={`text-[9px] sm:text-[10px] font-bold font-mono mt-1.5 ${isSelected
-                          ? "text-white font-black"
-                          : isActive
-                            ? "text-emerald-400"
-                            : isCompleted
-                              ? "text-slate-300"
-                              : "text-slate-600"
-                        }`}
-                    >
-                      {item.day}
-                    </span>
-                  </button>
-                );
-              })}
+                      {/* Day Number Label */}
+                      <span
+                        className={`text-[9px] sm:text-[10px] font-bold font-mono mt-1.5 ${isSelected
+                            ? "text-white font-black"
+                            : isActive
+                              ? "text-emerald-400"
+                              : isCompleted
+                                ? "text-slate-300"
+                                : "text-slate-600"
+                          }`}
+                      >
+                        {item.day}
+                      </span>
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </div>
 
-          {/* BOTTOM PART: Selected Day Inspector Card [ Day 2 ] */}
+          {/* BOTTOM PART: Selected Day Inspector Card */}
           <div className="bg-[#07111F]/90 p-5 rounded-xl border border-slate-800 grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
             {/* Left Box: [ Day X ] Tile Icon */}
             <div className="md:col-span-3 flex flex-col items-center justify-center p-4 rounded-xl bg-[#030712] border border-[#3B82F6]/30 text-center space-y-1">
@@ -942,14 +1156,14 @@ export default function StudentDashboard() {
               <span
                 className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${selectedDayNum <= profile.completedDays
                     ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                    : selectedDayNum === 12
+                    : selectedDayNum === activeDayNumber
                       ? "bg-[#3B82F6]/20 text-[#3B82F6] border border-[#3B82F6]/30"
                       : "bg-slate-800 text-slate-500"
                   }`}
               >
                 {selectedDayNum <= profile.completedDays
                   ? "Completed & Verified"
-                  : selectedDayNum === 12
+                  : selectedDayNum === activeDayNumber
                     ? "Active Build Today"
                     : "Locked Build"}
               </span>
@@ -960,11 +1174,13 @@ export default function StudentDashboard() {
               <div>
                 <h4 className="text-sm font-bold text-white">
                   Day {selectedDayNum} Task:{" "}
-                  {selectedDayNum === 12
-                    ? MOCK_DAY_12_TASK.title
+                  {selectedDayNum === 1
+                    ? "Build & Deploy Personal Developer Portfolio"
                     : selectedDayNum === 2
                       ? "Component Library & CSS Tokens System"
-                      : `Build Challenge Day ${selectedDayNum}`}
+                      : selectedDayNum === 12
+                        ? MOCK_DAY_12_TASK.title
+                        : `Build Challenge Day ${selectedDayNum}`}
                 </h4>
               </div>
 
@@ -972,7 +1188,7 @@ export default function StudentDashboard() {
               <ul className="space-y-1 text-xs text-slate-300">
                 <li className="flex items-center gap-2">
                   <span className="text-[#3B82F6] font-bold">•</span>
-                  <span>Submission Status: {selectedDayNum <= profile.completedDays ? "100% Score Verified On-Chain" : selectedDayNum === 12 ? "In Progress" : "Not Started"}</span>
+                  <span>Submission Status: {selectedDayNum <= profile.completedDays ? "100% Verified On-Chain" : selectedDayNum === activeDayNumber ? "In Progress Today" : "Locked"}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-[#3B82F6] font-bold">•</span>
@@ -980,7 +1196,7 @@ export default function StudentDashboard() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-[#3B82F6] font-bold">•</span>
-                  <span>Time Spent: {selectedDayNum <= profile.completedDays ? "1.5 Hours" : "2 Hours Est."}</span>
+                  <span>Time Spent: {selectedDayNum <= profile.completedDays ? "2 Hours" : "2 Hours Est."}</span>
                 </li>
               </ul>
 
@@ -998,88 +1214,143 @@ export default function StudentDashboard() {
         </section>
 
         {/* Achievements of Student Showcase */}
-        <section className="dash-card navy-card rounded-2xl p-5 sm:p-6 border border-slate-800 space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
-            <div className="flex items-center gap-2.5">
-              <Trophy className="w-5 h-5 text-amber-400" />
-              <div>
-                <h3 className="text-lg font-black text-white tracking-tight uppercase">ACHIEVEMENTS</h3>
-                <p className="text-xs text-slate-400">Unlocked milestone badges & proof accomplishments</p>
+        {(() => {
+          const dynamicAchievements = [
+            {
+              id: "first_commit",
+              title: "First Proof",
+              description: "Submitted your very first day of public proof of work.",
+              icon: "🚀",
+              requiredDays: 1,
+              unlockedAt: profile.completedDays >= 1 ? "Day 01" : null,
+              category: "consistency",
+            },
+            {
+              id: "streak_10",
+              title: "Consistency Titan",
+              description: "Maintained an unbroken 10-day coding streak.",
+              icon: "🔥",
+              requiredDays: 10,
+              unlockedAt: profile.completedDays >= 10 ? "Day 10" : null,
+              category: "consistency",
+            },
+            {
+              id: "git_master",
+              title: "Git Master",
+              description: "Committed clean, documented code for 10 straight builds.",
+              icon: "⚡",
+              requiredDays: 10,
+              unlockedAt: profile.completedDays >= 10 ? "Day 10" : null,
+              category: "code",
+            },
+            {
+              id: "halfway_hero",
+              title: "Halfway Hero",
+              description: "Reach Day 30 without missing a single submission.",
+              icon: "👑",
+              requiredDays: 30,
+              unlockedAt: profile.completedDays >= 30 ? "Day 30" : null,
+              category: "consistency",
+            },
+            {
+              id: "ship_it_all",
+              title: "60-Day Champion",
+              description: "Complete all 60 builds and finish the challenge.",
+              icon: "🏆",
+              requiredDays: 60,
+              unlockedAt: profile.completedDays >= 60 ? "Day 60" : null,
+              category: "community",
+            },
+          ];
+
+          const unlockedCount = dynamicAchievements.filter((a) => a.unlockedAt !== null).length;
+          const totalXP = profile.completedDays * 100;
+
+          return (
+            <section className="dash-card navy-card rounded-2xl p-5 sm:p-6 border border-slate-800 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <Trophy className="w-5 h-5 text-amber-400" />
+                  <div>
+                    <h3 className="text-lg font-black text-white tracking-tight uppercase">ACHIEVEMENTS</h3>
+                    <p className="text-xs text-slate-400">Unlocked milestone badges & proof accomplishments</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-3 py-1 rounded-full border border-[#3B82F6]/20">
+                    {unlockedCount} of {dynamicAchievements.length} Badges Unlocked
+                  </span>
+                  <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+                    {totalXP.toLocaleString()} Total XP
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-3 py-1 rounded-full border border-[#3B82F6]/20">
-                3 of 5 Badges Unlocked
-              </span>
-              <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-                2,720 Total XP
-              </span>
-            </div>
-          </div>
+              {/* Grid of Student Achievements / Badges */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {dynamicAchievements.map((ach) => {
+                  const dayTag = ach.unlockedAt || `Target Day ${ach.requiredDays}`;
+                  const isUnlocked = !!ach.unlockedAt;
 
-          {/* Grid of Student Achievements / Badges */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {MOCK_ACHIEVEMENTS.map((ach) => {
-              const dayTag = ach.unlockedAt || (ach.id === "halfway_hero" ? "Day 30" : "Day 60");
-              const isUnlocked = !!ach.unlockedAt;
-
-              return (
-                <div
-                  key={ach.id}
-                  className={`p-4 rounded-xl border transition-all flex flex-col justify-between space-y-3 ${
-                    isUnlocked
-                      ? "bg-[#07111F] border-slate-700/80 shadow-[0_0_15px_rgba(37,99,235,0.15)] hover:border-[#3B82F6]/50"
-                      : "bg-[#030712]/60 border-slate-800/60 opacity-50 cursor-not-allowed"
-                  }`}
-                >
-                  <div className="flex items-start gap-3.5">
+                  return (
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${
+                      key={ach.id}
+                      className={`p-4 rounded-xl border transition-all flex flex-col justify-between space-y-3 ${
                         isUnlocked
-                          ? "bg-[linear-gradient(135deg,rgba(37,99,235,0.2),rgba(11,31,58,0.8))] border border-[#3B82F6]/40 shadow-inner"
-                          : "bg-slate-900 border border-slate-800 text-slate-600"
+                          ? "bg-[#07111F] border-slate-700/80 shadow-[0_0_15px_rgba(37,99,235,0.15)] hover:border-[#3B82F6]/50"
+                          : "bg-[#030712]/60 border-slate-800/60 opacity-50 cursor-not-allowed"
                       }`}
                     >
-                      {ach.icon}
-                    </div>
-
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="text-sm font-bold text-white leading-tight">{ach.title}</h4>
-                        <span
-                          className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                      <div className="flex items-start gap-3.5">
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${
                             isUnlocked
-                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                              : "bg-slate-800 text-slate-500"
+                              ? "bg-[linear-gradient(135deg,rgba(37,99,235,0.2),rgba(11,31,58,0.8))] border border-[#3B82F6]/40 shadow-inner"
+                              : "bg-slate-900 border border-slate-800 text-slate-600"
                           }`}
                         >
-                          {isUnlocked ? `Unlocked ${dayTag}` : `Target ${dayTag}`}
-                        </span>
+                          {ach.icon}
+                        </div>
+
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="text-sm font-bold text-white leading-tight">{ach.title}</h4>
+                            <span
+                              className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                isUnlocked
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-slate-800 text-slate-500"
+                              }`}
+                            >
+                              {isUnlocked ? `Unlocked ${dayTag}` : dayTag}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-slate-400 leading-relaxed">{ach.description}</p>
+                        </div>
                       </div>
 
-                      <p className="text-xs text-slate-400 leading-relaxed">{ach.description}</p>
+                      {/* Download Badge Certificate Button for Unlocked Badges */}
+                      {isUnlocked && (
+                        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                          <span className="text-[10px] font-mono text-emerald-400 font-bold">✓ Verified Achievement</span>
+                          <button
+                            onClick={() => downloadAchievementBadge(ach.title, ach.icon, dayTag)}
+                            className="px-3 py-1 rounded-lg bg-[#3B82F6]/15 hover:bg-[#3B82F6]/30 border border-[#3B82F6]/30 text-[#3B82F6] text-[11px] font-bold font-mono flex items-center gap-1.5 transition-all shadow-sm hover:scale-105"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download Badge</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Download Badge Certificate Button for Unlocked Badges */}
-                  {isUnlocked && (
-                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-emerald-400 font-bold">✓ Verified Achievement</span>
-                      <button
-                        onClick={() => downloadAchievementBadge(ach.title, ach.icon, dayTag)}
-                        className="px-3 py-1 rounded-lg bg-[#3B82F6]/15 hover:bg-[#3B82F6]/30 border border-[#3B82F6]/30 text-[#3B82F6] text-[11px] font-bold font-mono flex items-center gap-1.5 transition-all shadow-sm hover:scale-105"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Download Badge</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
       </main>
 
       {/* Interactive Edit Profile Modal */}

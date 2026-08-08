@@ -11,9 +11,13 @@ export default function Navbar() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("home");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsLoggedIn(localStorage.getItem("isLoggedIn") === "true");
+    }
+
     // Entrance Animation
     const ctx = gsap.context(() => {
       gsap.fromTo(
@@ -36,58 +40,41 @@ export default function Navbar() {
       } else {
         setIsScrolled(false);
       }
-
-      // Track active section when on Landing Page (/)
-      if (pathname === "/") {
-        const challengeEl = document.getElementById("challenge");
-        const showcaseEl = document.getElementById("showcase");
-
-        const scrollPos = window.scrollY + 200;
-
-        if (showcaseEl && scrollPos >= showcaseEl.offsetTop) {
-          setActiveSection("showcase");
-        } else if (challengeEl && scrollPos >= challengeEl.offsetTop) {
-          setActiveSection("challenge");
-        } else {
-          setActiveSection("home");
-        }
-      }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Initial check
-
     return () => {
       ctx.revert();
       window.removeEventListener("scroll", handleScroll);
     };
   }, [pathname]);
 
-  // Route-based active section fallback
-  const currentActive =
-    pathname === "/dashboard"
-      ? "dashboard"
-      : pathname?.startsWith("/day")
-        ? "day12"
-        : activeSection;
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("isLoggedIn");
+      setIsLoggedIn(false);
+      window.location.href = "/";
+    }
+  };
 
-  const getLinkStyle = (key: string) => {
-    const isActive = currentActive === key;
+  const isHome = pathname === "/";
+  const isGuidelines = pathname === "/guidelines";
+  const isChallenges = pathname === "/challenges";
+
+  const getLinkStyle = (active: boolean) => {
     return `nav-item text-xs tracking-wider transition-all px-3.5 py-1.5 rounded-lg cursor-pointer outline-none focus:outline-none border-0 ${
-      isActive
+      active
         ? "bg-[#3B82F6]/25 text-[#3B82F6] font-bold shadow-[0_0_15px_rgba(59,130,246,0.25)] scale-105"
         : "text-[#94A3B8] font-semibold hover:text-[#F8FAFC] hover:bg-slate-900/60"
     }`;
   };
 
-  const scrollToSection = (id: string) => {
-    if (pathname === "/") {
-      const el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth" });
-        setActiveSection(id);
-      }
-    }
+  const getMobileLinkStyle = (active: boolean) => {
+    return `block text-sm py-2 px-3 rounded-lg text-left w-full transition-all ${
+      active
+        ? "bg-[#3B82F6]/20 text-[#3B82F6] font-bold border border-[#3B82F6]/30"
+        : "font-semibold text-slate-300 hover:text-white hover:bg-slate-900/60"
+    }`;
   };
 
   return (
@@ -112,48 +99,57 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop Nav Links */}
+        {/* Desktop Nav Links: HOME, GUIDELINES, CHALLENGES, PLATFORM */}
         <nav className="hidden md:flex items-center gap-2">
-          <Link href="/" className={getLinkStyle("home")}>
+          <Link href="/" className={getLinkStyle(isHome)}>
             HOME
           </Link>
-          {pathname === "/" ? (
-            <button
-              onClick={() => scrollToSection("challenge")}
-              className={getLinkStyle("challenge")}
-            >
-              CHALLENGE
-            </button>
-          ) : (
-            <Link href="/#challenge" className={getLinkStyle("challenge")}>
-              CHALLENGE
-            </Link>
-          )}
-          {pathname === "/" ? (
-            <button
-              onClick={() => scrollToSection("showcase")}
-              className={getLinkStyle("showcase")}
-            >
-              PLATFORM
-            </button>
-          ) : (
-            <Link href="/#showcase" className={getLinkStyle("showcase")}>
-              PLATFORM
-            </Link>
-          )}
+
+          <Link href="/guidelines" className={getLinkStyle(isGuidelines)}>
+            GUIDELINES
+          </Link>
+
+          <Link href="/challenges" className={getLinkStyle(isChallenges)}>
+            CHALLENGES
+          </Link>
+
+          <Link href="/#showcase" className={getLinkStyle(false)}>
+            PLATFORM
+          </Link>
         </nav>
 
         {/* CTA & Mobile Toggle */}
-        <div className="nav-item flex items-center gap-3">
-          <Link
-            href="/login"
-            data-magnetic="true"
-            className="relative group overflow-hidden px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all duration-300 flex items-center gap-1.5"
-          >
-            <span className="relative z-10">LOGIN</span>
-            <ArrowUpRight className="w-3.5 h-3.5 relative z-10 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,#3B82F6,#2563EB)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          </Link>
+        <div className="nav-item flex items-center gap-2 sm:gap-3">
+          {isLoggedIn ? (
+            <>
+              <Link
+                href="/dashboard"
+                data-magnetic="true"
+                className="relative group overflow-hidden px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-lg bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all duration-300 flex items-center gap-1.5"
+              >
+                <span className="relative z-10">DASHBOARD</span>
+                <ArrowUpRight className="w-3.5 h-3.5 relative z-10 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,#3B82F6,#2563EB)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </Link>
+              <button
+                onClick={handleLogout}
+                title="Sign out"
+                className="px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-semibold text-slate-400 hover:text-white hover:border-slate-700 transition-all hidden sm:inline-block"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              data-magnetic="true"
+              className="relative group overflow-hidden px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all duration-300 flex items-center gap-1.5"
+            >
+              <span className="relative z-10">LOGIN</span>
+              <ArrowUpRight className="w-3.5 h-3.5 relative z-10 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,#3B82F6,#2563EB)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </Link>
+          )}
 
           {/* Mobile Menu Toggle Button */}
           <button
@@ -168,66 +164,38 @@ export default function Navbar() {
 
       {/* Mobile Drawer (390px Viewport) */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#07111F]/95 backdrop-blur-2xl border-b border-slate-800 px-6 py-4 space-y-3 animate-fade-in">
+        <div className="md:hidden bg-[#07111F]/95 backdrop-blur-2xl border-b border-slate-800 px-5 py-4 space-y-2 animate-fade-in">
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
-            className={`block text-sm py-1.5 ${currentActive === "home" ? "font-bold text-[#3B82F6]" : "font-semibold text-slate-300 hover:text-white"}`}
+            className={getMobileLinkStyle(isHome)}
           >
-            Home Page
+            Home
           </Link>
+
           <Link
-            href="/dashboard"
+            href="/guidelines"
             onClick={() => setMobileMenuOpen(false)}
-            className={`block text-sm py-1.5 ${currentActive === "dashboard" ? "font-bold text-[#3B82F6]" : "font-semibold text-slate-300 hover:text-white"}`}
+            className={getMobileLinkStyle(isGuidelines)}
           >
-            Student Dashboard (/dashboard)
+            Guidelines
           </Link>
+
           <Link
-            href="/day/12"
+            href="/challenges"
             onClick={() => setMobileMenuOpen(false)}
-            className={`block text-sm py-1.5 ${currentActive === "day12" ? "font-bold text-[#3B82F6]" : "font-semibold text-slate-300 hover:text-white"}`}
+            className={getMobileLinkStyle(isChallenges)}
           >
-            Challenge Day (/day/12)
+            Challenges
           </Link>
-          {pathname === "/" ? (
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                scrollToSection("challenge");
-              }}
-              className={`block text-sm py-1.5 text-left w-full ${currentActive === "challenge" ? "font-bold text-[#3B82F6]" : "font-semibold text-slate-300 hover:text-white"}`}
-            >
-              The Challenge
-            </button>
-          ) : (
-            <Link
-              href="/#challenge"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-semibold text-slate-300 hover:text-white py-1.5"
-            >
-              The Challenge
-            </Link>
-          )}
-          {pathname === "/" ? (
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                scrollToSection("showcase");
-              }}
-              className={`block text-sm py-1.5 text-left w-full ${currentActive === "showcase" ? "font-bold text-[#3B82F6]" : "font-semibold text-slate-300 hover:text-white"}`}
-            >
-              Platform Showcase
-            </button>
-          ) : (
-            <Link
-              href="/#showcase"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-semibold text-slate-300 hover:text-white py-1.5"
-            >
-              Platform Showcase
-            </Link>
-          )}
+
+          <Link
+            href="/#showcase"
+            onClick={() => setMobileMenuOpen(false)}
+            className={getMobileLinkStyle(false)}
+          >
+            Platform
+          </Link>
         </div>
       )}
     </header>

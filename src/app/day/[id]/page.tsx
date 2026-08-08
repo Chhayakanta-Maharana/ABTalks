@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import {
   ArrowLeft,
@@ -24,6 +24,79 @@ import {
 import { MOCK_DAY_12_TASK, MOCK_ACTIVITY_FEED } from "@/data/mockData";
 import AtmosphericBackground from "@/components/AtmosphericBackground";
 
+const getTaskForDay = (numStr: string) => {
+  const dayNum = parseInt(numStr, 10) || 1;
+  if (dayNum === 1) {
+    return {
+      dayNumber: 1,
+      title: "Build & Deploy Personal Developer Portfolio",
+      track: "Fullstack Web & AI Systems",
+      difficulty: "Beginner" as const,
+      estimatedTime: "2 hours",
+      description:
+        "Kick off your 60-day challenge by constructing a modern, responsive personal developer portfolio showcasing your technical stack, bio, GitHub repositories, and live project cards.",
+      requirements: [
+        "Set up Next.js App Router repository with Tailwind CSS styling",
+        "Deploy live site to Vercel/Netlify with custom domain",
+        "Push initial clean commit to public GitHub repository",
+        "Share Day 1 proof post on LinkedIn with #ABTalks hashtag",
+      ],
+      starterRepoUrl: "https://github.com/Chhayakanta-Maharana/ABTalks/",
+      resources: [
+        { title: "Next.js App Router Documentation", url: "https://nextjs.org/docs" },
+        { title: "Tailwind CSS Quickstart Guide", url: "https://tailwindcss.com/docs/installation" },
+        { title: "Vercel Deployment Guide", url: "https://vercel.com/docs" },
+      ],
+      isSubmitted: false,
+    };
+  } else if (dayNum === 2) {
+    return {
+      dayNumber: 2,
+      title: "Design System & CSS Component Tokens",
+      track: "Fullstack Web & AI Systems",
+      difficulty: "Beginner" as const,
+      estimatedTime: "2 hours",
+      description:
+        "Build a reusable UI design system with dark mode color tokens, glassmorphism cards, custom typography, and accessible button components.",
+      requirements: [
+        "Define CSS color variables for primary, secondary, and surface accents",
+        "Create reusable Card, Button, and Badge React components",
+        "Implement responsive layout container wrapper with padding breakpoints",
+        "Publish design system storybook or documentation page",
+      ],
+      starterRepoUrl: "https://github.com/Chhayakanta-Maharana/ABTalks/",
+      resources: [
+        { title: "Design System Architecture", url: "https://micro-frontends.org/" },
+        { title: "Accessible Component Guidelines", url: "https://www.w3.org/WAI/ARIA/apg/" },
+      ],
+      isSubmitted: false,
+    };
+  } else if (dayNum === 12) {
+    return MOCK_DAY_12_TASK;
+  } else {
+    return {
+      dayNumber: dayNum,
+      title: `Day ${dayNum} Engineering Challenge`,
+      track: "Fullstack Web & AI Systems",
+      difficulty: dayNum > 30 ? ("Advanced" as const) : ("Intermediate" as const),
+      estimatedTime: "2 hours",
+      description: `Complete the Day ${dayNum} hands-on build task. Implement core features, write clean modular code, push commits to GitHub, and share your proof of work.`,
+      requirements: [
+        `Implement main functional features for Day ${dayNum} challenge`,
+        "Ensure full responsive layout scaling across mobile and desktop viewports",
+        "Commit clean code to public GitHub repository with descriptive commit message",
+        `Post public proof update on LinkedIn highlighting Day ${dayNum} build learnings`,
+      ],
+      starterRepoUrl: "https://github.com/Chhayakanta-Maharana/ABTalks/",
+      resources: [
+        { title: "ABTalks Challenge Guidelines", url: "/guidelines" },
+        { title: "GitHub Commit Best Practices", url: "https://git-scm.com/doc" },
+      ],
+      isSubmitted: false,
+    };
+  }
+};
+
 const GithubIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
@@ -40,10 +113,22 @@ const LinkedinIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
 );
 
 export default function ChallengeDayPage() {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const params = useParams();
   const rawId = params?.id;
-  const dayId = typeof rawId === "string" ? rawId : Array.isArray(rawId) ? rawId[0] : "12";
+  const dayId = typeof rawId === "string" ? rawId : Array.isArray(rawId) ? rawId[0] : "1";
+  const currentTask = getTaskForDay(dayId);
+
+  // Authentication Protection Check
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+      if (!loggedIn) {
+        router.push("/login");
+      }
+    }
+  }, [router]);
 
   // Form Submission State
   const [githubUrl, setGithubUrl] = useState("");
@@ -85,15 +170,39 @@ export default function ChallengeDayPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!githubUrl || !linkedinUrl) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+      const token = localStorage.getItem("authToken");
+      const res = await fetch(`${API_BASE}/submissions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          dayNumber: Number(dayId),
+          githubCommitUrl: githubUrl,
+          linkedinPostUrl: linkedinUrl,
+          demoUrl: demoUrl || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to save submission");
+      }
+
       setSubmitted(true);
-    }, 1200);
+    } catch (err: any) {
+      alert(err.message || "Failed to submit proof. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCopyRepo = () => {
@@ -125,7 +234,7 @@ export default function ChallengeDayPage() {
                 DAY {dayId}
               </span>
               <span className="text-xs font-bold text-slate-300 hidden sm:inline">
-                {MOCK_DAY_12_TASK.title}
+                {currentTask.title}
               </span>
             </div>
           </div>
@@ -133,7 +242,7 @@ export default function ChallengeDayPage() {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-[#0B1F3A] px-2.5 py-1 rounded-lg border border-slate-800 text-xs font-bold text-white">
               <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 animate-pulse" />
-              <span>11 Streak</span>
+              <span>Streak Active</span>
             </div>
           </div>
         </div>
@@ -148,19 +257,19 @@ export default function ChallengeDayPage() {
                 <span className="text-[11px] font-bold text-[#3B82F6] tracking-widest uppercase font-mono">
                   CHALLENGE DAY {dayId} / 60
                 </span>
-                <span className="text-[11px] text-slate-400 font-mono">• {MOCK_DAY_12_TASK.track}</span>
+                <span className="text-[11px] text-slate-400 font-mono">• {currentTask.track}</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                {MOCK_DAY_12_TASK.title}
+                {currentTask.title}
               </h1>
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-1">
                 <span className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  Est. {MOCK_DAY_12_TASK.estimatedTime}
+                  Est. {currentTask.estimatedTime}
                 </span>
                 <span className="flex items-center gap-1">
                   <Award className="w-3.5 h-3.5 text-[#3B82F6]" />
-                  {MOCK_DAY_12_TASK.difficulty}
+                  {currentTask.difficulty}
                 </span>
                 <span className="flex items-center gap-1 text-emerald-400 font-mono">
                   +100 XP & Streak Increment
@@ -193,7 +302,7 @@ export default function ChallengeDayPage() {
                 Overview & Objective
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                {MOCK_DAY_12_TASK.description}
+                {currentTask.description}
               </p>
 
               {/* Requirements Checklist */}
@@ -202,7 +311,7 @@ export default function ChallengeDayPage() {
                   DELIVERABLE CHECKLIST
                 </h3>
                 <div className="space-y-2">
-                  {MOCK_DAY_12_TASK.requirements.map((req, idx) => {
+                  {currentTask.requirements.map((req, idx) => {
                     const checked = completedReqs.includes(idx);
                     return (
                       <button
@@ -236,7 +345,7 @@ export default function ChallengeDayPage() {
                   RECOMMENDED RESOURCES
                 </h3>
                 <div className="space-y-1.5">
-                  {MOCK_DAY_12_TASK.resources.map((res, idx) => (
+                  {currentTask.resources.map((res, idx) => (
                     <a
                       key={idx}
                       href={res.url}
@@ -320,9 +429,9 @@ export default function ChallengeDayPage() {
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-base font-bold text-white">Day 12 Submission Locked!</h3>
+                    <h3 className="text-base font-bold text-white">Day {dayId} Submission Locked!</h3>
                     <p className="text-xs text-emerald-300/80">
-                      Your streak increased to <span className="font-bold text-white">12 Days</span> 🔥. Great work building today!
+                      Your streak increased to <span className="font-bold text-white">Day {dayId}</span> 🔥. Great work building today!
                     </p>
                   </div>
                   <div className="pt-2">
@@ -363,7 +472,7 @@ export default function ChallengeDayPage() {
                       required
                       value={linkedinUrl}
                       onChange={(e) => setLinkedinUrl(e.target.value)}
-                      placeholder="https://linkedin.com/posts/chhayakanta-maharana_abtalks-day12..."
+                      placeholder={`https://linkedin.com/posts/chhayakanta-maharana_abtalks-day${dayId}...`}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#07111F] border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
                     />
                   </div>
@@ -400,7 +509,7 @@ export default function ChallengeDayPage() {
                       ) : (
                         <>
                           <Send className="w-4 h-4" />
-                          <span>Submit Proof & Lock Day 12</span>
+                          <span>Submit Proof & Lock Day {dayId}</span>
                         </>
                       )}
                     </button>
@@ -413,7 +522,7 @@ export default function ChallengeDayPage() {
             <section className="dash-card navy-card rounded-2xl p-5 space-y-3">
               <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5 text-[#3B82F6]" />
-                Recent Peer Submissions (Day 12)
+                Recent Peer Submissions (Day {dayId})
               </h3>
 
               <div className="space-y-2.5">

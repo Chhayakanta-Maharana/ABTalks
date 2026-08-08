@@ -29,7 +29,7 @@ export default function DailyLoop() {
   }, []);
 
   return (
-    <section ref={sectionRef} id="daily-loop" className="border-t border-[#1e2030] py-32">
+    <section ref={sectionRef} id="guidelines" className="border-t border-[#1e2030] py-32">
       <div className="max-w-[820px] mx-auto px-8">
         {/* Eyebrow */}
         <div className="flex items-center gap-3 mb-6">

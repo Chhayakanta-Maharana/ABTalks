@@ -15,11 +15,12 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
+  AlertCircle,
 } from "lucide-react";
 import AtmosphericBackground from "@/components/AtmosphericBackground";
 
 const GithubIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={className} width={16} height={16} style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
     <path d="M9 18c-4.51 2-5-2-7-2" />
   </svg>
@@ -31,6 +32,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Form states
   const [formData, setFormData] = useState({
@@ -45,22 +47,60 @@ export default function LoginPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrorMessage("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage("");
 
-    // Simulate authentication processing
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      if (mode === "register" && formData.password !== formData.confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+      const endpoint = mode === "login" ? `${API_BASE}/auth/login` : `${API_BASE}/auth/register`;
+
+      const payload =
+        mode === "login"
+          ? { email: formData.email, password: formData.password }
+          : {
+              name: formData.name,
+              username: formData.username,
+              email: formData.email,
+              password: formData.password,
+            };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Authentication failed");
+      }
+
+      // Save Auth Token & User Profile in LocalStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("authToken", data.token);
+        localStorage.setItem("userProfile", JSON.stringify(data.user));
+      }
+
       setIsSuccess(true);
-
-      // Redirect to dashboard after success feedback
       setTimeout(() => {
         router.push("/dashboard");
-      }, 1000);
-    }, 1200);
+      }, 900);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to authenticate. Please check your details.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -140,7 +180,10 @@ export default function LoginPage() {
               <div className="flex items-center p-1 rounded-xl bg-[#030712]/90 border border-slate-800 mb-6">
                 <button
                   type="button"
-                  onClick={() => setMode("login")}
+                  onClick={() => {
+                    setMode("login");
+                    setErrorMessage("");
+                  }}
                   className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-200 ${
                     mode === "login"
                       ? "bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]"
@@ -151,7 +194,10 @@ export default function LoginPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMode("register")}
+                  onClick={() => {
+                    setMode("register");
+                    setErrorMessage("");
+                  }}
                   className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-200 ${
                     mode === "register"
                       ? "bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]"
@@ -163,7 +209,7 @@ export default function LoginPage() {
               </div>
 
               {/* Title & Description */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <h2 className="text-xl font-bold tracking-tight text-white">
                   {mode === "login" ? "Welcome Back, Developer" : "Join ABTalks 60-Day Challenge"}
                 </h2>
@@ -173,6 +219,14 @@ export default function LoginPage() {
                     : "Create your account to start tracking your daily builds."}
                 </p>
               </div>
+
+              {/* Error Message Box */}
+              {errorMessage && (
+                <div className="mb-4 p-3 rounded-xl bg-red-950/40 border border-red-500/30 flex items-center gap-2 text-xs text-red-300">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
 
               {/* Success Overlay Feedback */}
               {isSuccess ? (
@@ -255,15 +309,6 @@ export default function LoginPage() {
                         <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">
                           Password
                         </label>
-                        {mode === "login" && (
-                          <button
-                            type="button"
-                            onClick={() => alert("Password reset link sent to your email!")}
-                            className="text-[11px] text-[#3B82F6] hover:underline"
-                          >
-                            Forgot Password?
-                          </button>
-                        )}
                       </div>
                       <div className="relative">
                         <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -307,35 +352,6 @@ export default function LoginPage() {
                       </div>
                     )}
 
-                    {/* Checkbox Options */}
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      {mode === "login" ? (
-                        <label className="flex items-center gap-2 cursor-pointer text-[#94A3B8] hover:text-white">
-                          <input
-                            type="checkbox"
-                            checked={formData.remember}
-                            onChange={(e) => setFormData({ ...formData, remember: e.target.checked })}
-                            className="rounded border-slate-800 bg-[#030712] text-[#3B82F6] focus:ring-0"
-                          />
-                          <span>Remember me on this device</span>
-                        </label>
-                      ) : (
-                        <label className="flex items-center gap-2 cursor-pointer text-[#94A3B8] hover:text-white">
-                          <input
-                            type="checkbox"
-                            required
-                            checked={formData.agreeTerms}
-                            onChange={(e) => setFormData({ ...formData, agreeTerms: e.target.checked })}
-                            className="rounded border-slate-800 bg-[#030712] text-[#3B82F6] focus:ring-0"
-                          />
-                          <span>
-                            I agree to the{" "}
-                            <span className="text-[#3B82F6] underline">Challenge Terms & Code of Conduct</span>
-                          </span>
-                        </label>
-                      )}
-                    </div>
-
                     {/* Submit Button */}
                     <button
                       type="submit"
@@ -360,7 +376,10 @@ export default function LoginPage() {
                         New to ABTalks?{" "}
                         <button
                           type="button"
-                          onClick={() => setMode("register")}
+                          onClick={() => {
+                            setMode("register");
+                            setErrorMessage("");
+                          }}
                           className="text-[#3B82F6] font-bold hover:underline"
                         >
                           Create an account
@@ -371,7 +390,10 @@ export default function LoginPage() {
                         Already have an account?{" "}
                         <button
                           type="button"
-                          onClick={() => setMode("login")}
+                          onClick={() => {
+                            setMode("login");
+                            setErrorMessage("");
+                          }}
                           className="text-[#3B82F6] font-bold hover:underline"
                         >
                           Sign In
