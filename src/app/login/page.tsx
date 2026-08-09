@@ -66,6 +66,8 @@ export default function LoginPage() {
     }
   }, []);
 
+  const [previewInboxUrl, setPreviewInboxUrl] = useState("");
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrorMessage("");
@@ -82,11 +84,22 @@ export default function LoginPage() {
         if (!formData.email || !formData.email.trim()) {
           throw new Error("Please enter your registered email address.");
         }
-        const origin = typeof window !== "undefined" ? window.location.origin : "";
-        const token = `abtalks_reset_${Math.random().toString(36).substring(2, 10)}`;
-        const resetUrl = `${origin}/login?resetToken=${token}&email=${encodeURIComponent(formData.email.trim())}`;
-        
-        setGeneratedResetLink(resetUrl);
+
+        const res = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: formData.email.trim() }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Failed to send password reset email.");
+        }
+
+        setGeneratedResetLink(data.resetUrl);
+        if (data.previewUrl) {
+          setPreviewInboxUrl(data.previewUrl);
+        }
         setResetSent(true);
         setIsLoading(false);
         return;
@@ -364,29 +377,40 @@ export default function LoginPage() {
                     <div className="py-4 space-y-4 animate-fade-in">
                       <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30 space-y-2 text-xs text-emerald-200">
                         <div className="flex items-center gap-2 font-bold text-emerald-400">
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Password Reset Link Dispatched!</span>
+                          <Mail className="w-4 h-4 text-emerald-400" />
+                          <span>Email Dispatched to Your Inbox!</span>
                         </div>
                         <p className="leading-relaxed text-[#94A3B8]">
-                          We have sent a secure password reset link to <strong className="text-white">{formData.email}</strong>.
+                          A secure password reset email containing your link has been dispatched to <strong className="text-white font-mono">{formData.email}</strong>.
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          Please check your email inbox and spam folder for the email from <strong className="text-slate-300">ABTalks Security Engine</strong>.
                         </p>
                       </div>
 
-                      <div className="p-3.5 rounded-xl bg-[#030712] border border-slate-800 space-y-2">
-                        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Generated Reset Link:</span>
-                        <div className="p-2 rounded bg-slate-900 font-mono text-[10px] text-[#3B82F6] break-all border border-slate-800 select-all">
-                          {generatedResetLink}
-                        </div>
+                      {previewInboxUrl && (
+                        <a
+                          href={previewInboxUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-[#3B82F6] hover:text-white hover:border-[#3B82F6] flex items-center justify-center gap-2 transition-all"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          <span>View Delivered Inbox Email Message ✉️</span>
+                        </a>
+                      )}
+
+                      <div className="pt-2">
                         <button
                           type="button"
                           onClick={() => {
                             setMode("reset");
                             setResetSent(false);
                           }}
-                          className="w-full mt-2 py-2.5 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] transition-all"
+                          className="w-full py-2.5 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] transition-all"
                         >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>Click to Open Password Reset Link Now</span>
+                          <KeyRound className="w-3.5 h-3.5" />
+                          <span>Open Password Reset Page Directly</span>
                         </button>
                       </div>
 
