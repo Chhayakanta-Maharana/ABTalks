@@ -104,12 +104,13 @@ export default function StudentDashboard() {
   // Editable Profile State
   const [customProfile, setCustomProfile] = useState({
     name: INITIAL_STUDENT_PROFILE.name,
+    email: "student@abtalks.app",
     track: INITIAL_STUDENT_PROFILE.track,
     avatar: INITIAL_STUDENT_PROFILE.avatar,
     githubHandle: INITIAL_STUDENT_PROFILE.githubHandle,
     linkedinHandle: INITIAL_STUDENT_PROFILE.linkedinHandle,
     thought: "Building 60 AI & Web systems in 60 days. Staying consistent every single day! 🚀",
-    techStack: ["Next.js 14", "TypeScript", "TailwindCSS", "Python", "OpenCV", "PyTorch"],
+    techStack: ["Next.js 15", "TypeScript", "Golang", "Neon PostgreSQL", "Tailwind CSS v4"],
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -265,6 +266,7 @@ export default function StudentDashboard() {
               setCustomProfile((prev) => ({
                 ...prev,
                 name: parsed.name || prev.name,
+                email: parsed.email || prev.email,
                 track: parsed.track || prev.track,
                 avatar: parsed.avatar || prev.avatar,
                 githubHandle: parsed.githubHandle || prev.githubHandle,
@@ -306,6 +308,7 @@ export default function StudentDashboard() {
 
           const loadedProfile = {
             name: data.user.name || INITIAL_STUDENT_PROFILE.name,
+            email: data.user.email || "student@abtalks.app",
             track: data.user.track || INITIAL_STUDENT_PROFILE.track,
             avatar: data.user.avatar || INITIAL_STUDENT_PROFILE.avatar,
             githubHandle: data.user.githubHandle || "",
@@ -751,7 +754,7 @@ export default function StudentDashboard() {
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs border-t border-slate-800/80 pt-3">
               <div className="flex items-center gap-1.5 text-slate-300">
                 <Mail className="w-3.5 h-3.5 text-[#3B82F6]" />
-                <span>developer@abtalks.com</span>
+                <span className="font-mono text-xs text-[#3B82F6] font-semibold">{customProfile.email}</span>
               </div>
               <div className="flex items-center gap-1.5 text-slate-300">
                 <GithubIcon className="w-3.5 h-3.5 text-[#3B82F6]" />
@@ -766,9 +769,22 @@ export default function StudentDashboard() {
         </section>
 
         {/* ========================================================================= */}
-        {/* WIREFRAME ROW 2: TODAY TASK CARD (FULL WIDTH) */}
+        {/* WIREFRAME ROW 2: TODAY TASK CARD (FULL WIDTH & COUNTDOWN STATUS) */}
         {/* ========================================================================= */}
         <section className="dash-card navy-card rounded-2xl p-6 border border-[#3B82F6]/30 shadow-[0_0_35px_rgba(37,99,235,0.15)] relative overflow-hidden">
+          {getDayStatus(activeDayNumber).status === "completed" || profile.completedDays >= activeDayNumber ? (
+            <div className="mb-4 p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>🎉 Today&apos;s Day {activeDayNumber} Task Completed! Great job!</span>
+              </div>
+              <div className="text-xs font-mono font-bold text-emerald-300 bg-emerald-950/80 px-3 py-1 rounded-lg border border-emerald-500/30 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-emerald-400 animate-spin" style={{ animationDuration: "6s" }} />
+                <span>Next Task Unlocks In: {formatCountdown(calendarInfo.msUntilNext)}</span>
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             {/* Left Side: Today Task Title & Bulleted Requirements */}
             <div className="space-y-3 max-w-2xl">
@@ -800,10 +816,17 @@ export default function StudentDashboard() {
             {/* Right Side: Status Pills & Action Button */}
             <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3 shrink-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  <span>In Progress</span>
-                </span>
+                {getDayStatus(activeDayNumber).status === "completed" || profile.completedDays >= activeDayNumber ? (
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Completed</span>
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                    <span>In Progress</span>
+                  </span>
+                )}
                 <span className="px-3 py-1 rounded-full bg-[#07111F] border border-slate-800 text-xs font-mono font-bold text-amber-300 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-amber-400" />
                   <span>Next Day Unlocks: {formatCountdown(calendarInfo.msUntilNext)}</span>
@@ -814,7 +837,7 @@ export default function StudentDashboard() {
                 href={`/day/${activeDayNumber}`}
                 className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(37,99,235,0.4)] hover:shadow-[0_0_35px_rgba(59,130,246,0.6)] hover:scale-[1.02] transition-all"
               >
-                <span>OPEN DAY {activeDayNumber} TASK</span>
+                <span>{getDayStatus(activeDayNumber).status === "completed" || profile.completedDays >= activeDayNumber ? "REVIEW DAY 1 SUBMISSION" : `OPEN DAY ${activeDayNumber} TASK`}</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -1488,6 +1511,19 @@ export default function StudentDashboard() {
                   onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl bg-[#07111F] border border-slate-800 text-xs text-white focus:outline-none focus:border-[#3B82F6]"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">
+                  Registered Email Address <span className="text-[10px] text-amber-400 font-normal">(Primary Email — Locked)</span>
+                </label>
+                <input
+                  type="email"
+                  value={tempProfile.email || customProfile.email}
+                  disabled
+                  readOnly
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#030712] border border-slate-800 text-xs font-mono text-[#3B82F6] font-bold cursor-not-allowed select-none opacity-80"
                 />
               </div>
 
