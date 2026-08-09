@@ -20,22 +20,6 @@ export default function Footer() {
           </span>
         </div>
 
-        {/* Links */}
-        <div className="flex flex-wrap items-center gap-6 text-xs font-medium">
-          <Link href="#challenge" className="hover:text-white transition-colors">
-            CHALLENGE
-          </Link>
-          <Link href="#loop" className="hover:text-white transition-colors">
-            METHODOLOGY
-          </Link>
-          <Link href="#showcase" className="hover:text-white transition-colors">
-            PLATFORM
-          </Link>
-          <Link href="#analytics" className="hover:text-white transition-colors">
-            ANALYTICS
-          </Link>
-        </div>
-
         {/* Social Icons */}
         <div className="flex items-center gap-4">
           <a
