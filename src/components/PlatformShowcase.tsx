@@ -66,26 +66,26 @@ export default function PlatformShowcase() {
   const activePhase = phases[activePhaseIdx];
 
   return (
-    <section ref={containerRef} id="showcase" className="relative py-32 border-t border-[rgba(148,163,184,0.12)] overflow-hidden">
+    <section ref={containerRef} id="showcase" className="relative pt-28 md:pt-36 pb-32 border-t border-[rgba(148,163,184,0.12)] overflow-hidden scroll-mt-24">
       {/* Background Radial Blue Spotlight */}
       <div
         ref={spotlightRef}
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[850px] h-[550px] rounded-full bg-[radial-gradient(ellipse,rgba(37,99,235,0.22)_0%,transparent_70%)] pointer-events-none blur-3xl"
       />
 
-      <div className="relative max-w-6xl mx-auto px-6 md:px-12 z-10">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 md:px-12 z-10">
         {/* Header */}
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full navy-glass border border-[rgba(59,130,246,0.3)] mb-4">
             <Flame className="w-4 h-4 text-[#3B82F6]" />
             <span className="text-xs font-bold tracking-widest text-[#3B82F6] uppercase">
               ABTALKS DASHBOARD
             </span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mb-4">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-4">
             Engineered for physical momentum.
           </h2>
-          <p className="text-base text-[#94A3B8]">
+          <p className="text-sm sm:text-base text-[#94A3B8]">
             Track your 60-day streak, automate GitHub verification, and display your public evidence log.
           </p>
         </div>
@@ -93,10 +93,10 @@ export default function PlatformShowcase() {
         {/* 3D Dashboard Showcase Object */}
         <div
           ref={cardRef}
-          className="navy-card rounded-2xl p-6 md:p-10 border border-[rgba(148,163,184,0.18)] shadow-[0_25px_70px_rgba(0,0,0,0.6)] backdrop-blur-2xl relative"
+          className="navy-card rounded-2xl p-4 sm:p-6 md:p-10 border border-[rgba(148,163,184,0.18)] shadow-[0_25px_70px_rgba(0,0,0,0.6)] backdrop-blur-2xl relative"
         >
           {/* Top Bar Controls */}
-          <div className="flex items-center justify-between pb-6 border-b border-[rgba(148,163,184,0.12)] mb-8">
+          <div className="flex items-center justify-between pb-4 sm:pb-6 border-b border-[rgba(148,163,184,0.12)] mb-6 sm:mb-8">
             <div className="flex items-center gap-3">
               <div className="flex gap-2">
                 <div className="w-3 h-3 rounded-full bg-[#EF4444]/80" />
@@ -108,7 +108,7 @@ export default function PlatformShowcase() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-mono bg-[#2563EB]/20 text-[#3B82F6] border border-[#2563EB]/40 flex items-center gap-1.5">
+              <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-mono bg-[#2563EB]/20 text-[#3B82F6] border border-[#2563EB]/40 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse" />
                 DAY 12 ACTIVE
               </span>
@@ -116,12 +116,12 @@ export default function PlatformShowcase() {
           </div>
 
           {/* Interactive Phase Selector */}
-          <div className="mb-10">
+          <div className="mb-8 sm:mb-10">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-xs font-bold tracking-widest text-[#3B82F6] uppercase">
+              <span className="text-[11px] sm:text-xs font-bold tracking-widest text-[#3B82F6] uppercase">
                 CURRENT PHASE: {activePhase.name}
               </span>
-              <span className="text-xs font-mono text-[#94A3B8]">
+              <span className="text-[11px] sm:text-xs font-mono text-[#94A3B8]">
                 {activePhase.pct}% COMPLETED
               </span>
             </div>
@@ -135,7 +135,7 @@ export default function PlatformShowcase() {
             </div>
 
             {/* Milestone Markers */}
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-1 sm:gap-2">
               {phases.map((p, idx) => {
                 const isActive = idx === activePhaseIdx;
                 const isPast = idx <= activePhaseIdx;
@@ -143,7 +143,7 @@ export default function PlatformShowcase() {
                   <button
                     key={p.name}
                     onClick={() => setActivePhaseIdx(idx)}
-                    className={`p-3 rounded-xl border text-left transition-all duration-300 ${
+                    className={`p-1.5 sm:p-3 rounded-xl border text-center sm:text-left min-w-0 transition-all duration-300 ${
                       isActive
                         ? "bg-[#2563EB]/20 border-[#3B82F6] shadow-[0_0_20px_rgba(37,99,235,0.3)]"
                         : isPast
@@ -151,10 +151,10 @@ export default function PlatformShowcase() {
                         : "bg-[#030712] border-[rgba(148,163,184,0.1)] text-[#64748B]"
                     }`}
                   >
-                    <div className="text-[10px] font-mono text-[#64748B] mb-1">
+                    <div className="text-[9px] sm:text-[10px] font-mono text-[#64748B] mb-0.5 sm:mb-1 truncate">
                       DAY {String(p.day).padStart(2, "0")}
                     </div>
-                    <div className={`text-xs font-bold ${isActive ? "text-white" : "text-[#94A3B8]"}`}>
+                    <div className={`text-[10px] sm:text-xs font-bold truncate ${isActive ? "text-white" : "text-[#94A3B8]"}`}>
                       {p.name}
                     </div>
                   </button>

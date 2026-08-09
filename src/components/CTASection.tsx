@@ -87,8 +87,8 @@ export default function CTASection() {
 
         <h2
           ref={headlineRef}
-          className="font-black tracking-tight text-white leading-[0.92] uppercase mb-10"
-          style={{ fontSize: "clamp(3rem, 7.5vw, 6.5rem)" }}
+          className="font-black tracking-tight text-white leading-[0.98] uppercase mb-10 break-words"
+          style={{ fontSize: "clamp(1.85rem, 6.5vw, 6.5rem)" }}
         >
           READY TO SHOW UP<br />
           <span className="bg-[linear-gradient(135deg,#3B82F6,#2563EB)] bg-clip-text text-transparent">

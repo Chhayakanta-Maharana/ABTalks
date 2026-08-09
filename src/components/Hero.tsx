@@ -160,8 +160,8 @@ export default function Hero() {
           {/* Headline */}
           <h1
             ref={headlineRef}
-            className="font-black tracking-tighter text-[#F8FAFC] leading-[0.92] mb-8"
-            style={{ fontSize: "clamp(3.5rem, 7.5vw, 7.2rem)" }}
+            className="font-black tracking-tighter text-[#F8FAFC] leading-[0.98] mb-8 break-words"
+            style={{ fontSize: "clamp(2rem, 6.5vw, 7.2rem)" }}
           >
             <div className="clip-text-reveal overflow-hidden">
               <span className="hero-title-line block text-white">60 DAYS.</span>

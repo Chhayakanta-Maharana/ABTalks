@@ -79,8 +79,8 @@ export default function FullScreenStatement() {
 
         <h2
           ref={textRef}
-          className="font-black tracking-tight text-white leading-[0.92] uppercase"
-          style={{ fontSize: "clamp(3rem, 7vw, 6.8rem)" }}
+          className="font-black tracking-tight text-white leading-[0.98] uppercase max-w-full break-words"
+          style={{ fontSize: "clamp(1.75rem, 6.5vw, 6.8rem)" }}
         >
           THE CONVERSATION<br />
           <span className="bg-[linear-gradient(135deg,#3B82F6,#2563EB)] bg-clip-text text-transparent">
