@@ -112,33 +112,35 @@ export default function ChallengesPage() {
       <AtmosphericBackground />
 
       {/* Header Bar */}
-      <header className="sticky top-0 z-40 bg-[#07111F]/80 backdrop-blur-xl border-b border-[rgba(148,163,184,0.12)] px-4 py-3 sm:px-8">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#07111F]/95 backdrop-blur-xl border-b border-slate-800/80 shadow-[0_10px_30px_rgba(0,0,0,0.8)] px-3 py-2.5 sm:px-8 sm:py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
           <Link
             href="/"
-            className="flex items-center gap-1.5 text-xs text-[#94A3B8] hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-xs text-[#94A3B8] hover:text-white transition-colors shrink-0"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Home</span>
+            <ArrowLeft className="w-4 h-4 text-[#3B82F6]" />
+            <span className="hidden xs:inline">Back to Home</span>
+            <span className="xs:hidden">Home</span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 rounded bg-[#2563EB]/20 border border-[#3B82F6]/30 text-[#3B82F6] font-mono text-xs font-bold uppercase tracking-wider">
-              OBSTACLE & SOLUTION PLAYBOOK
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded bg-[#2563EB]/20 border border-[#3B82F6]/30 text-[#3B82F6] font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">
+              PLAYBOOK & OBSTACLES
             </span>
           </div>
 
           <Link
             href="/guidelines"
-            className="text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1"
+            className="text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1 shrink-0"
           >
-            <span>Guidelines</span>
+            <span className="hidden sm:inline">Guidelines</span>
+            <span className="sm:hidden">Rules</span>
             <ChevronRight className="w-4 h-4 text-[#3B82F6]" />
           </Link>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-5xl mx-auto px-4 sm:px-8 pt-10 space-y-10">
+      <main className="relative z-10 max-w-5xl mx-auto px-4 sm:px-8 pt-20 sm:pt-24 space-y-10">
         {/* Title Banner */}
         <section className="ch-card text-center space-y-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full navy-glass border border-[#3B82F6]/30 text-[#3B82F6] text-xs font-bold uppercase tracking-widest">
