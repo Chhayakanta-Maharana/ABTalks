@@ -375,43 +375,17 @@ export default function LoginPage() {
                   {/* Password Reset Sent Banner */}
                   {mode === "forgot" && resetSent ? (
                     <div className="py-4 space-y-4 animate-fade-in">
-                      <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30 space-y-2 text-xs text-emerald-200">
-                        <div className="flex items-center gap-2 font-bold text-emerald-400">
-                          <Mail className="w-4 h-4 text-emerald-400" />
-                          <span>Email Dispatched to Your Inbox!</span>
+                      <div className="p-5 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 space-y-3 text-xs text-emerald-200">
+                        <div className="flex items-center gap-2.5 font-bold text-emerald-400 text-sm">
+                          <Mail className="w-5 h-5 text-emerald-400 shrink-0" />
+                          <span>Password Reset Email Sent to Inbox!</span>
                         </div>
                         <p className="leading-relaxed text-[#94A3B8]">
-                          A secure password reset email containing your link has been dispatched to <strong className="text-white font-mono">{formData.email}</strong>.
+                          We have sent a secure password reset email to <strong className="text-white font-mono">{formData.email}</strong>.
                         </p>
-                        <p className="text-[11px] text-slate-400">
-                          Please check your email inbox and spam folder for the email from <strong className="text-slate-300">ABTalks Security Engine</strong>.
+                        <p className="text-xs text-slate-300">
+                          Please open your Gmail inbox (or check your Spam folder) and click the password reset link inside the email to reset your password.
                         </p>
-                      </div>
-
-                      {previewInboxUrl && (
-                        <a
-                          href={previewInboxUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-[#3B82F6] hover:text-white hover:border-[#3B82F6] flex items-center justify-center gap-2 transition-all"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          <span>View Delivered Inbox Email Message ✉️</span>
-                        </a>
-                      )}
-
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMode("reset");
-                            setResetSent(false);
-                          }}
-                          className="w-full py-2.5 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] transition-all"
-                        >
-                          <KeyRound className="w-3.5 h-3.5" />
-                          <span>Open Password Reset Page Directly</span>
-                        </button>
                       </div>
 
                       <button
@@ -420,9 +394,9 @@ export default function LoginPage() {
                           setMode("login");
                           setResetSent(false);
                         }}
-                        className="w-full py-2 text-xs font-bold text-slate-400 hover:text-white transition-colors"
+                        className="w-full py-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white hover:border-slate-700 transition-all shadow-md"
                       >
-                        ← Back to Sign In
+                        ← Return to Sign In
                       </button>
                     </div>
                   ) : (

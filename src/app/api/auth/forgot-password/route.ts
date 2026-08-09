@@ -19,34 +19,7 @@ export async function POST(req: Request) {
     const resetToken = `abtalks_reset_${Math.random().toString(36).substring(2, 12)}_${Date.now()}`;
     const resetUrl = `${protocol}://${host}/login?resetToken=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
 
-    // Create Transporter (uses environment variables if provided, or fallback test account)
-    let transporter: nodemailer.Transporter;
-
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: Number(process.env.SMTP_PORT) === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-    } else {
-      // Create ethereal test account for demonstration / live dispatch
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: "smtp.ethereal.email",
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-    }
-
-    // HTML Email Template
+    // HTML Email Template for Gmail Inbox
     const htmlTemplate = `
       <!DOCTYPE html>
       <html>
@@ -63,7 +36,7 @@ export async function POST(req: Request) {
           .btn-container { text-align: center; margin: 32px 0; }
           .btn { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF !important; text-decoration: none; font-weight: 800; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; border-radius: 12px; box-shadow: 0 0 25px rgba(37, 99, 235, 0.4); }
           .url-box { background: #030712; border: 1px solid #1E293B; border-radius: 10px; padding: 12px; font-family: monospace; font-size: 11px; color: #3B82F6; word-break: break-all; margin-top: 20px; }
-          .footer { margin-top: 36px; pt-20px; border-top: 1px solid #1E293B; text-align: center; font-size: 11px; color: #64748B; }
+          .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #1E293B; text-align: center; font-size: 11px; color: #64748B; }
         </style>
       </head>
       <body>
@@ -94,8 +67,66 @@ export async function POST(req: Request) {
       </html>
     `;
 
-    // Send Mail to User Inbox
-    const info = await transporter.sendMail({
+    // 1. Try Resend API first if key exists
+    if (process.env.RESEND_API_KEY) {
+      const resendRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "ABTalks Security <onboarding@resend.dev>",
+          to: [cleanEmail],
+          subject: "🔑 ABTalks Password Reset Link",
+          html: htmlTemplate,
+        }),
+      });
+
+      if (resendRes.ok) {
+        return NextResponse.json({
+          success: true,
+          message: `Password reset link sent to Gmail inbox (${cleanEmail})`,
+        });
+      }
+    }
+
+    // 2. Try Gmail SMTP if configured
+    let transporter: nodemailer.Transporter;
+
+    if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+      transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD,
+        },
+      });
+    } else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: Number(process.env.SMTP_PORT) === 465,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+    } else {
+      // Fallback test transport
+      const testAccount = await nodemailer.createTestAccount();
+      transporter = nodemailer.createTransport({
+        host: "smtp.ethereal.email",
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+    }
+
+    await transporter.sendMail({
       from: '"ABTalks Security Engine" <noreply@abtalks.app>',
       to: cleanEmail,
       subject: "🔑 ABTalks Password Reset Link",
@@ -103,14 +134,9 @@ export async function POST(req: Request) {
       html: htmlTemplate,
     });
 
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-
     return NextResponse.json({
       success: true,
       message: `Password reset link sent to ${cleanEmail}`,
-      email: cleanEmail,
-      resetUrl: resetUrl,
-      previewUrl: previewUrl || null,
     });
   } catch (err: any) {
     return NextResponse.json(
