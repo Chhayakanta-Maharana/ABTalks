@@ -42,6 +42,7 @@ import {
   StudentProfile,
 } from "@/data/mockData";
 import AtmosphericBackground from "@/components/AtmosphericBackground";
+import Logo from "@/components/Logo";
 
 const GithubIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} width={16} height={16} style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -392,23 +393,50 @@ export default function StudentDashboard() {
     setReactions((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
   };
 
-  // Calculate real-time active calendar day automatically from user registration timestamp
-  const getRealCalendarDay = () => {
-    if (typeof window !== "undefined") {
-      let startDateStr = localStorage.getItem("challengeStartDate");
-      if (!startDateStr) {
-        startDateStr = new Date().toISOString();
-        localStorage.setItem("challengeStartDate", startDateStr);
-      }
-      const start = new Date(startDateStr).getTime();
-      const now = new Date().getTime();
-      const diffDays = Math.floor((now - start) / (1000 * 60 * 60 * 24)) + 1;
-      return Math.min(Math.max(diffDays, 1), 60);
-    }
-    return 1;
-  };
+  // 24-Hour Calendar Cycle & Countdown State
+  const [calendarInfo, setCalendarInfo] = useState<{ day: number; msUntilNext: number }>({
+    day: 1,
+    msUntilNext: 86400000,
+  });
 
-  const activeDayNumber = getRealCalendarDay();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let startDateStr = localStorage.getItem("challengeStartDate");
+    if (!startDateStr) {
+      startDateStr = new Date().toISOString();
+      localStorage.setItem("challengeStartDate", startDateStr);
+    }
+
+    const updateCalendar = () => {
+      const startMs = new Date(startDateStr!).getTime();
+      const nowMs = Date.now();
+      const elapsedMs = Math.max(0, nowMs - startMs);
+      const DAY_MS = 24 * 60 * 60 * 1000;
+
+      const currentDay = Math.min(Math.max(Math.floor(elapsedMs / DAY_MS) + 1, 1), 60);
+      const msElapsedToday = elapsedMs % DAY_MS;
+      const msUntilNext = DAY_MS - msElapsedToday;
+
+      setCalendarInfo({ day: currentDay, msUntilNext });
+    };
+
+    updateCalendar();
+    const interval = setInterval(updateCalendar, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const activeDayNumber = calendarInfo.day;
+
+  const formatCountdown = (ms: number) => {
+    const totalSec = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    return `${hours.toString().padStart(2, "0")}h ${mins
+      .toString()
+      .padStart(2, "0")}m ${secs.toString().padStart(2, "0")}s`;
+  };
 
   // Task Details Lookup
   const getDayTaskInfo = (dayNum: number) => {
@@ -527,39 +555,38 @@ export default function StudentDashboard() {
     <div ref={containerRef} className="min-h-screen bg-[#030712] text-[#F8FAFC] pb-24 font-sans selection:bg-[#3B82F6]/30">
       <AtmosphericBackground />
 
-      {/* Top Mobile-First Header Nav */}
-      <header className="sticky top-0 z-40 bg-[#07111F]/90 backdrop-blur-xl border-b border-slate-800/80 outline-none px-4 py-3 sm:px-8">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[linear-gradient(135deg,#2563EB,#0B1F3A)] p-[1px]">
-              <div className="w-full h-full bg-[#030712] rounded-[6px] flex items-center justify-center font-black text-[10px] text-[#3B82F6]">
-                AB
-              </div>
+      {/* Top Fixed Header Nav */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#07111F]/95 backdrop-blur-xl border-b border-slate-800/80 shadow-[0_10px_30px_rgba(0,0,0,0.8)] px-3 py-2.5 sm:px-8 sm:py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
+          <Link href="/" className="flex items-center gap-2 group shrink-0">
+            <div className="w-7 h-7 rounded-lg overflow-hidden border border-slate-800 shadow-md group-hover:border-[#3B82F6]/50 transition-all flex items-center justify-center bg-[#030712]">
+              <Logo size={26} className="w-full h-full" />
             </div>
-            <span className="text-xs font-black tracking-widest text-white uppercase">STUDENT DASHBOARD</span>
-          </div>
+            <span className="text-[11px] sm:text-xs font-black tracking-widest text-white uppercase hidden xs:inline">ABTALKS</span>
+          </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <Link
               href={`/day/${activeDayNumber}`}
-              className="px-3.5 py-1.5 rounded-lg bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase flex items-center gap-1 shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:scale-105 transition-all"
+              className="px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 rounded-lg bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-[10px] sm:text-xs font-bold tracking-wider uppercase flex items-center gap-1 shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:scale-105 transition-all"
             >
               <span>DAY {activeDayNumber} TASK</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </Link>
 
             <Link
               href="/"
-              className="px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-500/30 text-red-400 hover:text-white hover:bg-red-900/60 text-xs font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all shadow-sm"
+              title="Logout"
+              className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg bg-red-950/40 border border-red-500/30 text-red-400 hover:text-white hover:bg-red-900/60 text-[10px] sm:text-xs font-bold tracking-wider uppercase flex items-center gap-1 transition-all shadow-sm"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>LOGOUT</span>
+              <span className="hidden sm:inline">LOGOUT</span>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-8 pt-6 space-y-6">
+      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-8 pt-20 sm:pt-24 space-y-6">
 
         {/* Missed Day Alert Notification */}
         {activeDayNumber > 1 && profile.completedDays < activeDayNumber - 1 && (
@@ -771,13 +798,14 @@ export default function StudentDashboard() {
 
             {/* Right Side: Status Pills & Action Button */}
             <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3 shrink-0">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
                   <span>In Progress</span>
                 </span>
-                <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300">
-                  ⏱️ 2 Hours Est.
+                <span className="px-3 py-1 rounded-full bg-[#07111F] border border-slate-800 text-xs font-mono font-bold text-amber-300 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Next Day Unlocks: {formatCountdown(calendarInfo.msUntilNext)}</span>
                 </span>
               </div>
 
@@ -846,8 +874,9 @@ export default function StudentDashboard() {
           </div>
 
           {/* SVG Vector Line Chart 📈 Spanning Entire Full Width for Current Phase */}
-          <div className="h-60 w-full relative pt-2">
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 900 180" fill="none">
+          <div className="overflow-x-auto pb-2">
+            <div className="h-60 min-w-[600px] sm:min-w-0 w-full relative pt-2">
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 900 180" fill="none">
               {/* Background Y-Axis Grid Lines & Percentage Scale Labels */}
               {[
                 { label: "100%", y: 15 },
@@ -1020,6 +1049,7 @@ export default function StudentDashboard() {
               ))}
             </div>
           </div>
+        </div>
 
           {/* Clean Selected Day Inspector Strip - ONLY Day No, Day Task & Percentage Completed */}
           {(() => {
@@ -1113,8 +1143,8 @@ export default function StudentDashboard() {
           </div>
 
           {/* TOP PART: 30 Equal Vertical Pillar Progress Bars for Active Phase */}
-          <div className="bg-[#030712]/90 p-4 rounded-xl border border-slate-800">
-            <div className="flex items-end justify-between gap-1 sm:gap-2 w-full h-40 pt-6 pb-2 px-1">
+          <div className="bg-[#030712]/90 p-4 rounded-xl border border-slate-800 overflow-x-auto">
+            <div className="flex items-end justify-between gap-1 sm:gap-2 min-w-[540px] sm:min-w-0 h-40 pt-6 pb-2 px-1">
               {(() => {
                 const dynamicPillarData = Array.from({ length: 60 }).map((_, i) => {
                   const day = i + 1;

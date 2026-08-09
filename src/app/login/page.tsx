@@ -18,6 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import AtmosphericBackground from "@/components/AtmosphericBackground";
+import Logo from "@/components/Logo";
 
 const GithubIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} width={16} height={16} style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -73,46 +74,44 @@ export default function LoginPage() {
               password: formData.password,
             };
 
+      let res;
       try {
-        const res = await fetch(endpoint, {
+        res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || "Authentication failed");
-        }
-
-        // Save Auth Token & User Profile in LocalStorage
-        if (typeof window !== "undefined") {
-          localStorage.setItem("isLoggedIn", "true");
-          localStorage.setItem("authToken", data.token);
-          localStorage.setItem("userProfile", JSON.stringify(data.user));
-        }
-      } catch (networkErr: any) {
-        // If fetch fails because backend Go server is offline/unreachable, fall back gracefully to local session
-        if (networkErr.name === "TypeError" || networkErr.message?.includes("fetch") || networkErr.message?.includes("Failed")) {
-          console.warn("Golang backend server is offline. Falling back to client-side local session.");
-          if (typeof window !== "undefined") {
-            localStorage.setItem("isLoggedIn", "true");
-            localStorage.setItem("authToken", "local_session_token");
-            const fallbackUser = {
-              name: formData.name || "Chhayakanta Maharana",
-              username: formData.username || "chhayakanta",
-              email: formData.email || "developer@abtalks.com",
-              track: "Full-Stack AI & Web Systems",
-              avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-              thought: "Building 60 AI & Web systems in 60 days. Staying consistent every single day! 🚀",
-              techStack: ["Next.js", "TypeScript", "Golang", "Neon PostgreSQL"],
-            };
-            localStorage.setItem("userProfile", JSON.stringify(fallbackUser));
-          }
+      } catch (fetchErr) {
+        if (mode === "login") {
+          throw new Error(
+            "Unable to connect to authentication server. If you don't have an account yet, please register a new account first!"
+          );
         } else {
-          throw networkErr;
+          throw new Error(
+            "Unable to connect to authentication server right now. Please try again in a moment."
+          );
         }
+      }
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (mode === "login") {
+          throw new Error(
+            data.error || data.message || "Incorrect email address or password. If you are new to ABTalks, please register first!"
+          );
+        } else {
+          throw new Error(
+            data.error || data.message || "Registration failed. An account with this email may already exist."
+          );
+        }
+      }
+
+      // Save Auth Token & User Profile from database response
+      if (typeof window !== "undefined") {
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("authToken", data.token);
+        localStorage.setItem("userProfile", JSON.stringify(data.user));
       }
 
       setIsSuccess(true);
@@ -140,11 +139,9 @@ export default function LoginPage() {
           <span>Back to Landing</span>
         </Link>
 
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-[linear-gradient(135deg,#2563EB,#0B1F3A)] p-[1px]">
-            <div className="w-full h-full bg-[#030712] rounded-[7px] flex items-center justify-center font-black text-xs text-[#3B82F6] group-hover:text-white transition-colors">
-              AB
-            </div>
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-800 shadow-md group-hover:border-[#3B82F6]/50 transition-all group-hover:scale-105 flex items-center justify-center bg-[#030712]">
+            <Logo size={32} className="w-full h-full" />
           </div>
           <span className="text-xs font-black tracking-[0.3em] text-[#F8FAFC] uppercase">
             ABTALKS
@@ -247,9 +244,34 @@ export default function LoginPage() {
 
               {/* Error Message Box */}
               {errorMessage && (
-                <div className="mb-4 p-3 rounded-xl bg-red-950/40 border border-red-500/30 flex items-center gap-2 text-xs text-red-300">
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                  <span>{errorMessage}</span>
+                <div className="mb-4 p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/30 flex flex-col gap-2 text-xs text-amber-200 backdrop-blur-md">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{errorMessage}</span>
+                  </div>
+                  {mode === "login" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("register");
+                        setErrorMessage("");
+                      }}
+                      className="self-start text-[11px] font-bold text-[#3B82F6] hover:underline pl-6"
+                    >
+                      New to ABTalks? Click here to Register First →
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("login");
+                        setErrorMessage("");
+                      }}
+                      className="self-start text-[11px] font-bold text-[#3B82F6] hover:underline pl-6"
+                    >
+                      Already registered? Click here to Sign In →
+                    </button>
+                  )}
                 </div>
               )}
 
