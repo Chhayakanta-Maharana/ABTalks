@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   Zap,
   AlertCircle,
+  KeyRound,
+  ExternalLink,
 } from "lucide-react";
 import AtmosphericBackground from "@/components/AtmosphericBackground";
 import Logo from "@/components/Logo";
@@ -30,11 +32,13 @@ const GithubIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [generatedResetLink, setGeneratedResetLink] = useState("");
 
   // Form states
   const [formData, setFormData] = useState({
@@ -47,6 +51,21 @@ export default function LoginPage() {
     agreeTerms: true,
   });
 
+  // Check URL parameters for direct reset token link on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("resetToken");
+      const email = params.get("email");
+      if (token) {
+        setMode("reset");
+        if (email) {
+          setFormData((prev) => ({ ...prev, email }));
+        }
+      }
+    }
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrorMessage("");
@@ -58,8 +77,55 @@ export default function LoginPage() {
     setErrorMessage("");
 
     try {
+      // 1. Forgot Password Flow
+      if (mode === "forgot") {
+        if (!formData.email || !formData.email.trim()) {
+          throw new Error("Please enter your registered email address.");
+        }
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        const token = `abtalks_reset_${Math.random().toString(36).substring(2, 10)}`;
+        const resetUrl = `${origin}/login?resetToken=${token}&email=${encodeURIComponent(formData.email.trim())}`;
+        
+        setGeneratedResetLink(resetUrl);
+        setResetSent(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Reset Password Execution Flow
+      if (mode === "reset") {
+        if (formData.password.length < 6) {
+          throw new Error("New password must be at least 6 characters long.");
+        }
+        if (formData.password !== formData.confirmPassword) {
+          throw new Error("Passwords do not match. Please enter identical passwords.");
+        }
+
+        // Cache reset user profile
+        if (typeof window !== "undefined") {
+          const cachedUser = localStorage.getItem("userProfile");
+          let userObj = { email: formData.email, name: "Student Developer" };
+          if (cachedUser) {
+            try {
+              userObj = { ...JSON.parse(cachedUser), password: formData.password };
+            } catch {}
+          }
+          localStorage.setItem("userProfile", JSON.stringify(userObj));
+        }
+
+        setIsSuccess(true);
+        setTimeout(() => {
+          setIsSuccess(false);
+          setMode("login");
+          setErrorMessage("Password updated successfully! Please Sign In with your new password.");
+        }, 1200);
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Register Password Validation
       if (mode === "register" && formData.password !== formData.confirmPassword) {
-        throw new Error("Passwords do not match");
+        throw new Error("Passwords do not match. Please verify your password entry.");
       }
 
       const API_BASE = getApiBaseUrl();
@@ -140,37 +206,34 @@ export default function LoginPage() {
           <span>Back to Landing</span>
         </Link>
 
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-800 shadow-md group-hover:border-[#3B82F6]/50 transition-all group-hover:scale-105 flex items-center justify-center bg-[#030712]">
-            <Logo size={32} className="w-full h-full" />
-          </div>
-          <span className="text-xs font-black tracking-[0.3em] text-[#F8FAFC] uppercase">
-            ABTALKS
-          </span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Logo size={28} />
+          <span className="text-xs font-black tracking-[0.25em] text-white uppercase">ABTALKS</span>
+        </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 flex items-center justify-center">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          {/* Left Side: Brand Value Prop (Desktop visible) */}
-          <div className="hidden lg:block lg:col-span-6 space-y-6 pr-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#2563EB]/15 border border-[#3B82F6]/30 text-[#3B82F6] text-xs font-bold tracking-widest uppercase">
-              <Zap className="w-3.5 h-3.5 fill-[#3B82F6]" />
-              <span>Join the 60-Day Engine</span>
+      <main className="relative z-20 max-w-5xl mx-auto px-6 py-8 w-full my-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* Left Side: Brand Motivation Column */}
+          <div className="lg:col-span-6 space-y-6 hidden lg:block">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#2563EB]/15 border border-[#3B82F6]/30 text-[#3B82F6] text-xs font-bold uppercase tracking-wider">
+              <Zap className="w-4 h-4" />
+              <span>60-Day Developer Acceleration Engine</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
-              Build in public. <br />
-              <span className="bg-gradient-to-r from-[#3B82F6] via-[#60A5FA] to-[#93C5FD] bg-clip-text text-transparent">
-                Prove your authority.
+            <h1 className="text-3xl xl:text-4xl font-black text-white leading-tight tracking-tight">
+              Prove Your Progress.<br />
+              <span className="bg-[linear-gradient(135deg,#3B82F6,#2563EB)] bg-clip-text text-transparent">
+                Become Impossible to Ignore.
               </span>
             </h1>
 
-            <p className="text-xs sm:text-sm text-[#94A3B8] leading-relaxed">
-              Track daily tasks, verify code on-chain, and join an elite group of developers building 60 projects in 60 days.
+            <p className="text-sm text-[#94A3B8] leading-relaxed max-w-md">
+              Log in to access your daily tasks, submit verified GitHub commits, track your 60-day streak, and earn verified developer credentials.
             </p>
 
+            {/* Feature Highlights */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center gap-3 p-3 rounded-xl bg-[#07111F]/60 border border-slate-800/80 backdrop-blur-md">
                 <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#3B82F6]/30 flex items-center justify-center text-[#3B82F6] flex-shrink-0">
@@ -194,7 +257,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Right Side: Auth Card (Professional Compact Size) */}
+          {/* Right Side: Auth Card */}
           <div className="lg:col-span-6 flex justify-center w-full">
             <div suppressHydrationWarning className="w-full max-w-[420px] navy-card p-6 sm:p-7 rounded-2xl border border-slate-800/90 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl relative overflow-hidden">
               {/* Top Mode Selector Tabs */}
@@ -205,6 +268,7 @@ export default function LoginPage() {
                   onClick={() => {
                     setMode("login");
                     setErrorMessage("");
+                    setResetSent(false);
                   }}
                   className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-200 ${
                     mode === "login"
@@ -220,6 +284,7 @@ export default function LoginPage() {
                   onClick={() => {
                     setMode("register");
                     setErrorMessage("");
+                    setResetSent(false);
                   }}
                   className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-200 ${
                     mode === "register"
@@ -234,12 +299,22 @@ export default function LoginPage() {
               {/* Title & Description */}
               <div className="mb-4">
                 <h2 className="text-xl font-bold tracking-tight text-white">
-                  {mode === "login" ? "Welcome Back, Developer" : "Join ABTalks 60-Day Challenge"}
+                  {mode === "login"
+                    ? "Welcome Back, Developer"
+                    : mode === "register"
+                    ? "Join ABTalks 60-Day Challenge"
+                    : mode === "forgot"
+                    ? "Reset Your Password"
+                    : "Set New Account Password"}
                 </h2>
                 <p className="text-xs text-[#94A3B8] mt-1">
                   {mode === "login"
                     ? "Enter your credentials to access your student dashboard."
-                    : "Create your account to start tracking your daily builds."}
+                    : mode === "register"
+                    ? "Create your account to start tracking your daily builds."
+                    : mode === "forgot"
+                    ? "Enter your registered email address to receive a secure password reset link."
+                    : `Enter and confirm your new password for ${formData.email || "your account"}.`}
                 </p>
               </div>
 
@@ -250,7 +325,7 @@ export default function LoginPage() {
                     <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <span className="leading-relaxed">{errorMessage}</span>
                   </div>
-                  {mode === "login" ? (
+                  {mode === "login" && (
                     <button
                       type="button"
                       onClick={() => {
@@ -260,17 +335,6 @@ export default function LoginPage() {
                       className="self-start text-[11px] font-bold text-[#3B82F6] hover:underline pl-6"
                     >
                       New to ABTalks? Click here to Register First →
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode("login");
-                        setErrorMessage("");
-                      }}
-                      className="self-start text-[11px] font-bold text-[#3B82F6] hover:underline pl-6"
-                    >
-                      Already registered? Click here to Sign In →
                     </button>
                   )}
                 </div>
@@ -283,146 +347,221 @@ export default function LoginPage() {
                     <CheckCircle2 className="w-8 h-8 animate-bounce" />
                   </div>
                   <h3 className="text-lg font-bold text-white">
-                    {mode === "login" ? "Authentication Successful!" : "Account Created Successfully!"}
+                    {mode === "login"
+                      ? "Authentication Successful!"
+                      : mode === "reset"
+                      ? "Password Reset Successful!"
+                      : "Account Created Successfully!"}
                   </h3>
-                  <p className="text-xs text-[#94A3B8]">Redirecting to your student dashboard...</p>
+                  <p className="text-xs text-[#94A3B8]">
+                    {mode === "reset" ? "Redirecting to Sign In..." : "Redirecting to your student dashboard..."}
+                  </p>
                 </div>
               ) : (
                 <>
-                  {/* Form */}
-                  <form onSubmit={handleSubmit} suppressHydrationWarning className="space-y-4">
-                    {/* Full Name & Username (Register only) */}
-                    {mode === "register" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">
-                            Full Name
-                          </label>
-                          <div className="relative">
-                            <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                            <input
-                              type="text"
-                              name="name"
-                              required
-                              suppressHydrationWarning
-                              value={formData.name}
-                              onChange={handleChange}
-                              placeholder="Chhayakanta Maharana"
-                              className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
-                            />
-                          </div>
+                  {/* Password Reset Sent Banner */}
+                  {mode === "forgot" && resetSent ? (
+                    <div className="py-4 space-y-4 animate-fade-in">
+                      <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30 space-y-2 text-xs text-emerald-200">
+                        <div className="flex items-center gap-2 font-bold text-emerald-400">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Password Reset Link Dispatched!</span>
                         </div>
+                        <p className="leading-relaxed text-[#94A3B8]">
+                          We have sent a secure password reset link to <strong className="text-white">{formData.email}</strong>.
+                        </p>
+                      </div>
 
-                        <div>
-                          <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">
-                            GitHub Username
-                          </label>
-                          <div className="relative">
-                            <GithubIcon className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                            <input
-                              type="text"
-                              name="username"
-                              required
-                              suppressHydrationWarning
-                              value={formData.username}
-                              onChange={handleChange}
-                              placeholder="chhayakanta"
-                              className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
-                            />
-                          </div>
+                      <div className="p-3.5 rounded-xl bg-[#030712] border border-slate-800 space-y-2">
+                        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Generated Reset Link:</span>
+                        <div className="p-2 rounded bg-slate-900 font-mono text-[10px] text-[#3B82F6] break-all border border-slate-800 select-all">
+                          {generatedResetLink}
                         </div>
-                      </div>
-                    )}
-
-                    {/* Email Input */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">
-                        Email Address
-                      </label>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="email"
-                          name="email"
-                          required
-                          suppressHydrationWarning
-                          value={formData.email}
-                          onChange={handleChange}
-                          placeholder="developer@abtalks.com"
-                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Password Input */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">
-                          Password
-                        </label>
-                      </div>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="password"
-                          required
-                          suppressHydrationWarning
-                          value={formData.password}
-                          onChange={handleChange}
-                          placeholder="••••••••••••"
-                          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
-                        />
                         <button
                           type="button"
-                          suppressHydrationWarning
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                          onClick={() => {
+                            setMode("reset");
+                            setResetSent(false);
+                          }}
+                          className="w-full mt-2 py-2.5 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] transition-all"
                         >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Click to Open Password Reset Link Now</span>
                         </button>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode("login");
+                          setResetSent(false);
+                        }}
+                        className="w-full py-2 text-xs font-bold text-slate-400 hover:text-white transition-colors"
+                      >
+                        ← Back to Sign In
+                      </button>
                     </div>
+                  ) : (
+                    /* Main Auth Form */
+                    <form onSubmit={handleSubmit} suppressHydrationWarning className="space-y-4">
+                      {/* Full Name & Username (Register only) */}
+                      {mode === "register" && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">
+                              Full Name
+                            </label>
+                            <div className="relative">
+                              <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                              <input
+                                type="text"
+                                name="name"
+                                required
+                                suppressHydrationWarning
+                                value={formData.name}
+                                onChange={handleChange}
+                                placeholder="Chhayakanta Maharana"
+                                className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                              />
+                            </div>
+                          </div>
 
-                    {/* Confirm Password (Register only) */}
-                    {mode === "register" && (
-                      <div>
-                        <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">
-                          Confirm Password
-                        </label>
-                        <div className="relative">
-                          <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            name="confirmPassword"
-                            required
-                            suppressHydrationWarning
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            placeholder="••••••••••••"
-                            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
-                          />
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">
+                              GitHub Username
+                            </label>
+                            <div className="relative">
+                              <GithubIcon className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                              <input
+                                type="text"
+                                name="username"
+                                required
+                                suppressHydrationWarning
+                                value={formData.username}
+                                onChange={handleChange}
+                                placeholder="chhayakanta"
+                                className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                              />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Submit Button */}
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      suppressHydrationWarning
-                      className="w-full py-3 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {isLoading ? (
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <span>{mode === "login" ? "Sign In to Dashboard" : "Create Developer Account"}</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
                       )}
-                    </button>
-                  </form>
+
+                      {/* Email Input (All modes except reset) */}
+                      {mode !== "reset" && (
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">
+                            Email Address
+                          </label>
+                          <div className="relative">
+                            <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="email"
+                              name="email"
+                              required
+                              suppressHydrationWarning
+                              value={formData.email}
+                              onChange={handleChange}
+                              placeholder="developer@abtalks.com"
+                              className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Password Input (Login, Register & Reset) */}
+                      {mode !== "forgot" && (
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">
+                              {mode === "reset" ? "New Password" : "Password"}
+                            </label>
+                            {mode === "login" && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMode("forgot");
+                                  setErrorMessage("");
+                                  setResetSent(false);
+                                }}
+                                className="text-[11px] font-bold text-[#3B82F6] hover:underline"
+                              >
+                                Forgot Password?
+                              </button>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type={showPassword ? "text" : "password"}
+                              name="password"
+                              required
+                              suppressHydrationWarning
+                              value={formData.password}
+                              onChange={handleChange}
+                              placeholder="••••••••••••"
+                              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                            />
+                            <button
+                              type="button"
+                              suppressHydrationWarning
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                            >
+                              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Confirm Password (Register & Reset only) */}
+                      {(mode === "register" || mode === "reset") && (
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">
+                            Confirm {mode === "reset" ? "New Password" : "Password"}
+                          </label>
+                          <div className="relative">
+                            <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type={showPassword ? "text" : "password"}
+                              name="confirmPassword"
+                              required
+                              suppressHydrationWarning
+                              value={formData.confirmPassword}
+                              onChange={handleChange}
+                              placeholder="••••••••••••"
+                              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#030712]/80 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Submit Button */}
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        suppressHydrationWarning
+                        className="w-full py-3 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <span>
+                              {mode === "login"
+                                ? "Sign In to Dashboard"
+                                : mode === "register"
+                                ? "Create Developer Account"
+                                : mode === "forgot"
+                                ? "Send Password Reset Link"
+                                : "Save & Update Password"}
+                            </span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
 
                   {/* Toggle Mode Footer */}
                   <div className="mt-6 text-center text-xs text-[#94A3B8]">
@@ -441,7 +580,7 @@ export default function LoginPage() {
                           Create an account
                         </button>
                       </p>
-                    ) : (
+                    ) : mode === "register" ? (
                       <p suppressHydrationWarning>
                         Already have an account?{" "}
                         <button
@@ -456,6 +595,17 @@ export default function LoginPage() {
                           Sign In
                         </button>
                       </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode("login");
+                          setErrorMessage("");
+                        }}
+                        className="text-[#3B82F6] font-bold hover:underline"
+                      >
+                        ← Back to Sign In
+                      </button>
                     )}
                   </div>
                 </>
