@@ -26,6 +26,7 @@ import {
 import { MOCK_DAY_12_TASK, MOCK_ACTIVITY_FEED } from "@/data/mockData";
 import AtmosphericBackground from "@/components/AtmosphericBackground";
 import Logo from "@/components/Logo";
+import { getApiBaseUrl } from "@/lib/config";
 
 const getTaskForDay = (numStr: string) => {
   const dayNum = parseInt(numStr, 10) || 1;
@@ -251,7 +252,7 @@ export default function ChallengeDayPage() {
 
     setIsSubmitting(true);
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+      const API_BASE = getApiBaseUrl();
       const token = localStorage.getItem("authToken");
       const res = await fetch(`${API_BASE}/submissions`, {
         method: "POST",

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import AtmosphericBackground from "@/components/AtmosphericBackground";
 import Logo from "@/components/Logo";
+import { getApiBaseUrl } from "@/lib/config";
 
 const GithubIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} width={16} height={16} style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -61,7 +62,7 @@ export default function LoginPage() {
         throw new Error("Passwords do not match");
       }
 
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+      const API_BASE = getApiBaseUrl();
       const endpoint = mode === "login" ? `${API_BASE}/auth/login` : `${API_BASE}/auth/register`;
 
       const payload =
