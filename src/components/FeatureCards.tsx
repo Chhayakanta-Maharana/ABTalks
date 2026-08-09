@@ -1,49 +1,86 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Code2, GitPullRequest, Share2, Award, ArrowRight } from "lucide-react";
+import { Code2, GitPullRequest, Share2, Award, ArrowRight, X, CheckCircle2, Zap } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const features = [
   {
+    id: 1,
     icon: Code2,
     num: "01",
     title: "DAILY BUILD REGIMEN",
     desc: "Ship production code every single day. No passive tutorial watching. Real projects, real architectures.",
     tag: "EXECUTION",
+    subtitle: "Days 1–15: Building Foundations & Execution Habits",
+    takeaway: "Transition from watching tutorials to shipping production-ready frontend & fullstack code daily. Develop unshakeable 24-hour build consistency.",
+    deliverables: [
+      "Personal Developer Portfolio Website & Component System",
+      "Dynamic Landing Pages with Modern Glassmorphic CSS",
+      "Responsive Multi-page Web Applications",
+      "Interactive Forms with Real-time Client & Server Validation",
+    ],
   },
   {
+    id: 2,
     icon: GitPullRequest,
     num: "02",
     title: "VERIFIED COMMIT TRAIL",
     desc: "Automated GitHub verification system logs your commits to create an immutable proof-of-work timeline.",
     tag: "PROOFS",
+    subtitle: "Days 16–30: Git Workflow & Automated Proof of Work",
+    takeaway: "Build an immutable, verified GitHub commit trail. Every single day's submission is verified, logged, and publicly visible to recruiters.",
+    deliverables: [
+      "Modular REST API Endpoints with Golang & Node.js",
+      "Relational Database Schemas with PostgreSQL & Neon DB",
+      "Clean Git Commit Histories with Conventional Commits",
+      "Dynamic API Integrations & State Management",
+    ],
   },
   {
+    id: 3,
     icon: Share2,
     num: "03",
     title: "PUBLIC BUILDING LOOP",
     desc: "Share daily progress across LinkedIn & Twitter. Transform stealth building into undeniable industry authority.",
     tag: "VISIBILITY",
+    subtitle: "Days 31–45: Personal Branding & Developer Visibility",
+    takeaway: "Turn stealth building into public authority. Learn to articulate your technical design choices, post proof updates, and attract recruiter inbound.",
+    deliverables: [
+      "Fullstack Web Applications with User Authentication (JWT)",
+      "Public Project Architecture Diagrams & Documentation",
+      "LinkedIn Technical Breakdown Posts & Progress Demos",
+      "End-to-End Deployed Projects on Vercel & Render",
+    ],
   },
   {
+    id: 4,
     icon: Award,
     num: "04",
     title: "COMPLEXITY COMPOUNDING",
     desc: "Watch your daily habits transform from simple UI components into full-stack SaaS & WebGL applications.",
     tag: "MASTERY",
+    subtitle: "Days 46–60: Fullstack SaaS Architecture & Advanced Systems",
+    takeaway: "Watch your daily habits compound into complex engineering capabilities. Graduate with 60 verified projects and a portfolio built for senior roles.",
+    deliverables: [
+      "Production SaaS Platforms with Database ORM Integration",
+      "Real-time Microservices & Background Worker Tasks",
+      "Interactive Visual Systems & Optimized Web Applications",
+      "Capstone Open-Source Fullstack Systems",
+    ],
   },
 ];
 
 export default function FeatureCards() {
   const containerRef = useRef<HTMLElement>(null);
+  const [activeModal, setActiveModal] = useState<typeof features[0] | null>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // 1. Heading & Info Timeline Reveal
       const infoTl = gsap.timeline({
         scrollTrigger: {
           trigger: containerRef.current,
@@ -58,7 +95,6 @@ export default function FeatureCards() {
         { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8 }
       );
 
-      // 2. Feature Cards Entrance with Distinct Movements
       gsap.fromTo(
         ".feat-card-1",
         { opacity: 0, x: -80, rotateZ: -6, filter: "blur(8px)" },
@@ -133,7 +169,7 @@ export default function FeatureCards() {
             </span>
           </h2>
           <p className="text-base text-[#94A3B8]">
-            Four core pillars designed to take you from static learner to high-impact engineer.
+            Four core pillars designed to take you from static learner to high-impact engineer. Click any card to inspect phase details.
           </p>
         </div>
 
@@ -145,7 +181,8 @@ export default function FeatureCards() {
             return (
               <div
                 key={feat.num}
-                className={`${cardClass} navy-card p-8 md:p-10 rounded-2xl border border-[rgba(148,163,184,0.12)] relative group hover:border-[#3B82F6]/40 transition-all duration-500 overflow-hidden backdrop-blur-xl`}
+                onClick={() => setActiveModal(feat)}
+                className={`${cardClass} navy-card p-8 md:p-10 rounded-2xl border border-[rgba(148,163,184,0.12)] relative group hover:border-[#3B82F6]/60 cursor-pointer transition-all duration-500 overflow-hidden backdrop-blur-xl shadow-lg hover:shadow-[0_0_35px_rgba(37,99,235,0.2)]`}
               >
                 {/* Subtle Hover Radial Lighting */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-[radial-gradient(circle,rgba(59,130,246,0.25)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -171,15 +208,111 @@ export default function FeatureCards() {
                   {feat.desc}
                 </p>
 
-                <div className="flex items-center gap-2 text-xs font-bold text-[#3B82F6] group-hover:translate-x-1.5 transition-transform duration-300">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveModal(feat);
+                  }}
+                  className="flex items-center gap-2 text-xs font-bold text-[#3B82F6] group-hover:translate-x-1.5 transition-transform duration-300"
+                >
                   <span>LEARN MORE ABOUT PHASE {feat.num}</span>
                   <ArrowRight className="w-4 h-4" />
-                </div>
+                </button>
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* Interactive Phase Detail Modal Popup */}
+      {activeModal && (
+        <div
+          className="fixed inset-0 z-50 bg-[#030712]/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+          onClick={() => setActiveModal(null)}
+        >
+          <div
+            className="bg-[#07111F] border border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Ambient Background Glow */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[radial-gradient(circle,rgba(37,99,235,0.15)_0%,transparent_70%)] pointer-events-none" />
+
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#2563EB]/20 border border-[#3B82F6]/30 text-[#3B82F6] text-[11px] font-bold font-mono">
+                    PHASE {activeModal.num}
+                  </span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+                    {activeModal.tag}
+                  </span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                  {activeModal.title}
+                </h3>
+                <p className="text-xs text-[#3B82F6] font-semibold">
+                  {activeModal.subtitle}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setActiveModal(null)}
+                className="w-8 h-8 rounded-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Key Takeaway Banner */}
+            <div className="p-4 rounded-2xl bg-[#030712]/80 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-[#3B82F6]" />
+                PHASE GOAL & INTENT
+              </span>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                {activeModal.takeaway}
+              </p>
+            </div>
+
+            {/* Deliverables Checklist */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase">
+                WHAT YOU WILL BUILD IN THIS PHASE
+              </h4>
+              <div className="space-y-2">
+                {activeModal.deliverables.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl bg-[#030712]/50 border border-slate-800 text-xs text-slate-200 flex items-start gap-2.5"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-[#3B82F6] shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Action Buttons */}
+            <div className="pt-2 flex items-center justify-between gap-3">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-bold text-slate-400 hover:text-white transition-all"
+              >
+                Close Window
+              </button>
+
+              <Link
+                href="/login"
+                className="px-6 py-2.5 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1D4ED8)] text-white text-xs font-bold tracking-wider uppercase flex items-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:scale-105 transition-all"
+              >
+                <span>START PHASE {activeModal.num} NOW</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
