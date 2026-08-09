@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="abLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="40%" stop-color="#F1F5F9" />
+      <stop offset="75%" stop-color="#CBD5E1" />
+      <stop offset="100%" stop-color="#94A3B8" />
+    </linearGradient>
+    <radialGradient id="abBgGlow" cx="50%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="60%" stop-color="#030712" />
+      <stop offset="100%" stop-color="#000000" />
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="100" fill="url(#abBgGlow)" />
+  <rect width="510" height="510" x="1" y="1" rx="99" fill="none" stroke="#1E293B" stroke-width="2" opacity="0.6"/>
+
+  <g transform="translate(6, 0)">
+    <path fill="url(#abLogoGrad)" fill-rule="evenodd" d="
+      M 95 380 
+      L 155 140 
+      L 205 140 
+      L 242 290 
+      L 220 290 
+      L 202 216 
+      L 142 216 
+      L 122 290 
+      L 152 290 
+      L 145 315 
+      L 85 315 
+      L 100 256 
+      L 70 380 
+      Z
+      M 148 193 
+      L 195 193 
+      L 172 102 
+      Z
+    " />
+
+    <path fill="url(#abLogoGrad)" fill-rule="evenodd" d="
+      M 225 140 
+      L 350 140 
+      C 400 140 430 162 430 198 
+      C 430 224 412 244 382 254 
+      C 420 264 440 288 440 322 
+      C 440 362 405 380 348 380 
+      L 225 380 
+      Z
+      M 275 168 
+      L 275 238 
+      L 342 238 
+      C 375 238 392 226 392 203 
+      C 392 180 375 168 342 168 
+      Z
+      M 275 264 
+      L 275 352 
+      L 348 352 
+      C 384 352 402 338 402 308 
+      C 402 278 384 264 348 264 
+      Z
+    " />
+
+    <path fill="#0F172A" d="
+      M 285 272 
+      L 338 272 
+      C 362 272 374 282 374 300 
+      C 374 318 362 328 338 328 
+      L 285 328 
+      Z
+    " opacity="0.4"/>
+  </g>
+</svg>
