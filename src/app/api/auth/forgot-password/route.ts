@@ -95,11 +95,12 @@ export async function POST(req: Request) {
     let transporter: nodemailer.Transporter;
 
     if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+      const cleanPass = process.env.GMAIL_APP_PASSWORD.replace(/\s+/g, "");
       transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
+          user: process.env.GMAIL_USER.trim(),
+          pass: cleanPass,
         },
       });
     } else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
