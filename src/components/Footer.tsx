@@ -1,7 +1,3 @@
-"use client";
-
-import Link from "next/link";
-
 export default function Footer() {
   return (
     <footer className="border-t border-[rgba(148,163,184,0.12)] bg-[#030712] py-16 text-[#94A3B8]">
@@ -19,22 +15,6 @@ export default function Footer() {
           <span className="text-xs text-[#64748B] pl-2 border-l border-[#1E2030]">
             60 DAYS · BUILD IN PUBLIC
           </span>
-        </div>
-
-        {/* Links */}
-        <div className="flex flex-wrap items-center gap-6 text-xs font-medium">
-          <Link href="#challenge" className="hover:text-white transition-colors">
-            CHALLENGE
-          </Link>
-          <Link href="#loop" className="hover:text-white transition-colors">
-            METHODOLOGY
-          </Link>
-          <Link href="#showcase" className="hover:text-white transition-colors">
-            PLATFORM
-          </Link>
-          <Link href="#analytics" className="hover:text-white transition-colors">
-            ANALYTICS
-          </Link>
         </div>
 
         {/* Social Icons */}

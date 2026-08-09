@@ -13,6 +13,8 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  const [activeSection, setActiveSection] = useState<"home" | "platform">("home");
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setIsLoggedIn(localStorage.getItem("isLoggedIn") === "true");
@@ -40,12 +42,44 @@ export default function Navbar() {
       } else {
         setIsScrolled(false);
       }
+
+      // Track active section between HOME and PLATFORM on home page
+      if (pathname === "/") {
+        const showcaseEl = document.getElementById("showcase");
+        if (showcaseEl) {
+          const rect = showcaseEl.getBoundingClientRect();
+          if (rect.top <= window.innerHeight * 0.45 && rect.bottom >= 150) {
+            setActiveSection("platform");
+            return;
+          }
+        }
+
+        if (window.location.hash === "#showcase" || window.location.hash === "#platform") {
+          setActiveSection("platform");
+        } else {
+          setActiveSection("home");
+        }
+      }
     };
 
+    const handleHashChange = () => {
+      if (pathname === "/") {
+        if (window.location.hash === "#showcase" || window.location.hash === "#platform") {
+          setActiveSection("platform");
+        } else {
+          setActiveSection("home");
+        }
+      }
+    };
+
+    handleScroll();
+
     window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("hashchange", handleHashChange);
     return () => {
       ctx.revert();
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("hashchange", handleHashChange);
     };
   }, [pathname]);
 
@@ -57,9 +91,33 @@ export default function Navbar() {
     }
   };
 
-  const isHome = pathname === "/";
+  const isHome = pathname === "/" && activeSection === "home";
+  const isPlatform = pathname === "/" && activeSection === "platform";
   const isGuidelines = pathname === "/guidelines";
   const isChallenges = pathname === "/challenges";
+
+  const handleHomeClick = (e: React.MouseEvent) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      setActiveSection("home");
+      if (window.location.hash) {
+        window.history.pushState(null, "", window.location.pathname);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handlePlatformClick = (e: React.MouseEvent) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      setActiveSection("platform");
+      window.history.pushState(null, "", "#showcase");
+      const showcaseEl = document.getElementById("showcase");
+      if (showcaseEl) {
+        showcaseEl.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
 
   const getLinkStyle = (active: boolean) => {
     return `nav-item text-xs tracking-wider transition-all px-3.5 py-1.5 rounded-lg cursor-pointer outline-none focus:outline-none border-0 ${
@@ -101,7 +159,7 @@ export default function Navbar() {
 
         {/* Desktop Nav Links: HOME, GUIDELINES, CHALLENGES, PLATFORM */}
         <nav className="hidden md:flex items-center gap-2">
-          <Link href="/" className={getLinkStyle(isHome)}>
+          <Link href="/" onClick={handleHomeClick} className={getLinkStyle(isHome)}>
             HOME
           </Link>
 
@@ -113,7 +171,7 @@ export default function Navbar() {
             CHALLENGES
           </Link>
 
-          <Link href="/#showcase" className={getLinkStyle(false)}>
+          <Link href="/#showcase" onClick={handlePlatformClick} className={getLinkStyle(isPlatform)}>
             PLATFORM
           </Link>
         </nav>
@@ -167,7 +225,10 @@ export default function Navbar() {
         <div className="md:hidden bg-[#07111F]/95 backdrop-blur-2xl border-b border-slate-800 px-5 py-4 space-y-2 animate-fade-in">
           <Link
             href="/"
-            onClick={() => setMobileMenuOpen(false)}
+            onClick={(e) => {
+              handleHomeClick(e);
+              setMobileMenuOpen(false);
+            }}
             className={getMobileLinkStyle(isHome)}
           >
             Home
@@ -191,8 +252,11 @@ export default function Navbar() {
 
           <Link
             href="/#showcase"
-            onClick={() => setMobileMenuOpen(false)}
-            className={getMobileLinkStyle(false)}
+            onClick={(e) => {
+              handlePlatformClick(e);
+              setMobileMenuOpen(false);
+            }}
+            className={getMobileLinkStyle(isPlatform)}
           >
             Platform
           </Link>

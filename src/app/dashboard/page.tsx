@@ -253,12 +253,44 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const fetchUserData = async () => {
+      // 1. Try loading cached userProfile from localStorage first
+      if (typeof window !== "undefined") {
+        const cachedUser = localStorage.getItem("userProfile");
+        if (cachedUser) {
+          try {
+            const parsed = JSON.parse(cachedUser);
+            if (parsed) {
+              setCustomProfile((prev) => ({
+                ...prev,
+                name: parsed.name || prev.name,
+                track: parsed.track || prev.track,
+                avatar: parsed.avatar || prev.avatar,
+                githubHandle: parsed.githubHandle || prev.githubHandle,
+                linkedinHandle: parsed.linkedinHandle || prev.linkedinHandle,
+                thought: parsed.thought || prev.thought,
+                techStack: Array.isArray(parsed.techStack)
+                  ? parsed.techStack
+                  : typeof parsed.techStack === "string"
+                  ? JSON.parse(parsed.techStack)
+                  : prev.techStack,
+              }));
+            }
+          } catch {}
+        }
+      }
+
+      // 2. Fetch remote user profile from backend API
       try {
         const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
         const token = localStorage.getItem("authToken");
         const res = await fetch(`${API_BASE}/user/profile`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
+
+        if (!res.ok) {
+          return;
+        }
+
         const data = await res.json();
         if (data.user) {
           let parsedStack = ["Next.js", "TypeScript", "Golang", "Neon PostgreSQL"];
@@ -287,9 +319,13 @@ export default function StudentDashboard() {
             currentStreak: data.user.currentStreak,
             standingRank: data.user.standingRank,
           });
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem("userProfile", JSON.stringify(loadedProfile));
+          }
         }
       } catch (err) {
-        console.error("Failed to load user from Neon PostgreSQL database:", err);
+        console.warn("Backend server (http://localhost:8080) is offline. Dashboard operating in local mode.");
       }
     };
 
@@ -328,12 +364,15 @@ export default function StudentDashboard() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setCustomProfile({ ...tempProfile });
+    if (typeof window !== "undefined") {
+      localStorage.setItem("userProfile", JSON.stringify(tempProfile));
+    }
     setIsEditModalOpen(false);
 
     try {
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
       const token = localStorage.getItem("authToken");
-      await fetch(`${API_BASE}/user/profile`, {
+      const res = await fetch(`${API_BASE}/user/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -341,8 +380,11 @@ export default function StudentDashboard() {
         },
         body: JSON.stringify(tempProfile),
       });
+      if (!res.ok) {
+        console.warn("Backend returned non-OK status when updating profile:", res.status);
+      }
     } catch (err) {
-      console.error("Failed to save profile to Neon PostgreSQL database:", err);
+      console.warn("Backend server offline. Saved profile to local browser storage.");
     }
   };
 
