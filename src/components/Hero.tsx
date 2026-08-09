@@ -184,11 +184,11 @@ export default function Hero() {
           {/* CTA Buttons */}
           <div className="hero-cta-group flex flex-wrap items-center gap-5">
             <Link
-              href="/dashboard"
+              href="/login"
               data-magnetic="true"
               className="px-8 py-4 rounded-xl bg-[linear-gradient(135deg,#2563EB,#1E40AF)] text-white font-bold text-sm tracking-wider uppercase shadow-[0_0_35px_rgba(37,99,235,0.4)] hover:shadow-[0_0_50px_rgba(59,130,246,0.6)] hover:scale-[1.02] transition-all duration-300 flex items-center gap-2"
             >
-              <span>OPEN STUDENT DASHBOARD</span>
+              <span>START NOW</span>
               <Zap className="w-4 h-4 fill-current" />
             </Link>
 

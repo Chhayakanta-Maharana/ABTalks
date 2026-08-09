@@ -102,11 +102,11 @@ export default function CTASection() {
 
         <Link
           ref={ctaBtnRef}
-          href="#"
+          href="/login"
           data-magnetic="true"
           className="inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-[linear-gradient(135deg,#2563EB,#1E40AF)] text-white font-extrabold text-base tracking-wider uppercase shadow-[0_0_40px_rgba(37,99,235,0.45)] hover:shadow-[0_0_60px_rgba(59,130,246,0.7)] hover:scale-105 transition-all duration-300 group"
         >
-          <span>START DAY 01 NOW</span>
+          <span>START NOW</span>
           <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
