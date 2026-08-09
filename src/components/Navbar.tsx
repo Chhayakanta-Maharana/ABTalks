@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { gsap } from "gsap";
 import { ArrowUpRight, Menu, X } from "lucide-react";
+import Logo from "./Logo";
 
 export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
@@ -87,12 +88,9 @@ export default function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="nav-item flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-[linear-gradient(135deg,#2563EB,#0B1F3A)] p-[1px]">
-            <div className="w-full h-full bg-[#030712] rounded-[7px] flex items-center justify-center font-black text-xs text-[#3B82F6] group-hover:text-white transition-colors">
-              AB
-            </div>
+        <Link href="/" className="nav-item flex items-center gap-2.5 group">
+          <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-800 shadow-md group-hover:border-[#3B82F6]/50 transition-all group-hover:scale-105 flex items-center justify-center bg-[#030712]">
+            <Logo size={32} className="w-full h-full" />
           </div>
           <span className="text-xs font-black tracking-[0.3em] text-[#F8FAFC] uppercase">
             ABTALKS

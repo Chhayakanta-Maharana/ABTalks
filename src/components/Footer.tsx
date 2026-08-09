@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Logo from "./Logo";
 
 export default function Footer() {
   return (
@@ -8,10 +9,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-8">
         {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[linear-gradient(135deg,#2563EB,#0B1F3A)] p-[1px]">
-            <div className="w-full h-full bg-[#030712] rounded-[7px] flex items-center justify-center font-black text-xs text-[#3B82F6]">
-              AB
-            </div>
+          <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center bg-[#030712]">
+            <Logo size={32} className="w-full h-full" />
           </div>
           <span className="text-xs font-black tracking-[0.3em] text-[#F8FAFC] uppercase">
             ABTALKS
