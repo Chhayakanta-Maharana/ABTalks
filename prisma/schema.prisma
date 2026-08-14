@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Poll {
+  id               String       @id @default(cuid())
+  question         String
+  category         String       @default("General")
+  expiresInMinutes Int          @default(20)
+  isClosed         Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  options          PollOption[]
+}
+
+model PollOption {
+  id        String   @id @default(cuid())
+  text      String
+  votes     Int      @default(0)
+  color     String   @default("from-blue-500 to-indigo-600")
+  pollId    String
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}

@@ -169,6 +169,10 @@ export default function Navbar() {
             CHALLENGES
           </Link>
 
+          <Link href="/polls" className={getLinkStyle(pathname === "/polls")}>
+            POLLS
+          </Link>
+
           <Link href="/#showcase" onClick={handlePlatformClick} className={getLinkStyle(isPlatform)}>
             PLATFORM
           </Link>
@@ -246,6 +250,14 @@ export default function Navbar() {
             className={getMobileLinkStyle(isChallenges)}
           >
             Challenges
+          </Link>
+
+          <Link
+            href="/polls"
+            onClick={() => setMobileMenuOpen(false)}
+            className={getMobileLinkStyle(pathname === "/polls")}
+          >
+            Polls & Live Results
           </Link>
 
           <Link
