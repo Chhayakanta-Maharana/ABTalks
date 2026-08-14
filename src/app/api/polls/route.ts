@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 const PRESET_COLORS = [
   "from-blue-500 to-indigo-600",
   "from-[#3B82F6] to-cyan-400",

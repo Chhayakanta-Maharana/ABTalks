@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // PATCH /api/polls/[id] - Toggle poll closed state in Database
 export async function PATCH(
   req: Request,
