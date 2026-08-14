@@ -990,6 +990,7 @@ export default function PollsPage() {
         {/* TAB 3: ANALYTICS & INSIGHTS */}
         {activeTab === "analytics" && (
           <div className="space-y-8">
+            {/* Top Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="navy-card p-6 rounded-2xl border border-slate-800/80">
                 <span className="text-xs font-semibold text-slate-400">Total Active Polls</span>
@@ -1000,57 +1001,117 @@ export default function PollsPage() {
               <div className="navy-card p-6 rounded-2xl border border-slate-800/80">
                 <span className="text-xs font-semibold text-slate-400">Cumulative Votes Cast</span>
                 <p className="text-3xl font-black text-blue-400 font-mono mt-2">
-                  {polls.reduce((acc, p) => acc + p.totalVotes, 0)}
+                  {polls.reduce((acc, p) => acc + (p.totalVotes || 0), 0)}
                 </p>
-                <span className="text-[11px] text-blue-300 mt-1 block">+14% in last 10 mins</span>
+                <span className="text-[11px] text-blue-300 mt-1 block">Real-time synced</span>
               </div>
 
               <div className="navy-card p-6 rounded-2xl border border-slate-800/80">
                 <span className="text-xs font-semibold text-slate-400">Highest Engagement Poll</span>
                 <p className="text-sm font-bold text-white mt-2 truncate">
-                  {polls.reduce((max, p) => (p.totalVotes > max.totalVotes ? p : max), polls[0]).question}
+                  {polls.length > 0
+                    ? polls.reduce((max, p) => ((p.totalVotes || 0) > (max.totalVotes || 0) ? p : max), polls[0]).question
+                    : "No polls yet"}
                 </p>
                 <span className="text-[11px] text-amber-400 mt-1 block font-mono">
-                  {polls.reduce((max, p) => (p.totalVotes > max.totalVotes ? p : max), polls[0]).totalVotes} Votes
+                  {polls.length > 0
+                    ? `${polls.reduce((max, p) => ((p.totalVotes || 0) > (max.totalVotes || 0) ? p : max), polls[0]).totalVotes || 0} Votes`
+                    : "0 Votes"}
                 </span>
               </div>
 
               <div className="navy-card p-6 rounded-2xl border border-slate-800/80">
                 <span className="text-xs font-semibold text-slate-400">Average Options / Poll</span>
                 <p className="text-3xl font-black text-emerald-400 font-mono mt-2">
-                  {(polls.reduce((acc, p) => acc + p.options.length, 0) / polls.length).toFixed(1)}
+                  {polls.length > 0
+                    ? (polls.reduce((acc, p) => acc + (p.options?.length || 0), 0) / polls.length).toFixed(1)
+                    : "0.0"}
                 </p>
-                <span className="text-[11px] text-slate-400 mt-1 block">Optimal 3-4 option structure</span>
+                <span className="text-[11px] text-slate-400 mt-1 block">Optimal option structure</span>
               </div>
             </div>
 
             {/* Detailed Analytics Breakdown for Selected Poll */}
-            <div className="navy-card p-8 rounded-3xl border border-slate-800/80">
-              <h3 className="text-lg font-bold text-white mb-4">
-                Detailed Vote Distribution for: "{activePoll.question}"
-              </h3>
-              <div className="space-y-4">
-                {activePoll.options.map((opt) => {
-                  const pct = activePoll.totalVotes > 0
-                    ? Math.round((opt.votes / activePoll.totalVotes) * 100)
-                    : 0;
-                  return (
-                    <div key={opt.id} className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                      <div className="flex justify-between text-xs font-semibold text-white mb-2">
-                        <span>{opt.text}</span>
-                        <span className="font-mono text-blue-400">{opt.votes} votes ({pct}%)</span>
-                      </div>
-                      <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full bg-gradient-to-r ${opt.color} transition-all duration-700`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
+            {activePoll ? (
+              <div className="navy-card p-6 sm:p-8 rounded-3xl border border-slate-800/80 space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+                  <div>
+                    <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider">
+                      {activePoll.category || "General"}
+                    </span>
+                    <h3 className="text-lg font-bold text-white mt-1">
+                      {activePoll.question}
+                    </h3>
+                  </div>
+
+                  {/* Poll Selector inside Analytics */}
+                  {polls.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">Switch:</span>
+                      <select
+                        value={selectedPollId}
+                        onChange={(e) => setSelectedPollId(e.target.value)}
+                        className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-blue-500 focus:outline-none"
+                      >
+                        {polls.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.question.substring(0, 30)}...
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  );
-                })}
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 font-medium">Leading Choice</span>
+                    <p className="text-xs font-bold text-amber-400 mt-1 truncate">
+                      {leadingOption ? leadingOption.text : "No votes yet"}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 font-medium">Total Poll Votes</span>
+                    <p className="text-xs font-bold text-white font-mono mt-1">
+                      {activePoll.totalVotes || 0} Votes
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 font-medium">Status</span>
+                    <p className={`text-xs font-bold mt-1 ${activePoll.isClosed ? "text-rose-400" : "text-emerald-400"}`}>
+                      {activePoll.isClosed ? "Closed / Expired" : "Active & Accepting Votes"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {(activePoll.options || []).map((opt) => {
+                    const totalV = activePoll.totalVotes || 0;
+                    const pct = totalV > 0
+                      ? Math.round((opt.votes / totalV) * 100)
+                      : 0;
+                    return (
+                      <div key={opt.id} className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+                        <div className="flex justify-between text-xs font-semibold text-white mb-2">
+                          <span>{opt.text}</span>
+                          <span className="font-mono text-blue-400">{opt.votes} votes ({pct}%)</span>
+                        </div>
+                        <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full bg-gradient-to-r ${opt.color || "from-blue-500 to-indigo-600"} transition-all duration-700`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="navy-card p-8 rounded-3xl text-center border border-slate-800">
+                <p className="text-sm text-slate-400">No active poll to display analytics for. Create a poll to see insights!</p>
+              </div>
+            )}
           </div>
         )}
 
