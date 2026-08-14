@@ -9,6 +9,7 @@ import StatsSection from "@/components/StatsSection";
 import GiantTypography from "@/components/GiantTypography";
 import PlatformShowcase from "@/components/PlatformShowcase";
 import DataVisualization from "@/components/DataVisualization";
+import LivePollSection from "@/components/LivePollSection";
 import FeatureCards from "@/components/FeatureCards";
 import FullScreenStatement from "@/components/FullScreenStatement";
 import Testimonials from "@/components/Testimonials";
@@ -23,6 +24,7 @@ export default function Home() {
       <div className="relative z-10">
         <Navbar />
         <Hero />
+        <LivePollSection />
         <StatsSection />
         <GiantTypography />
         <PlatformShowcase />

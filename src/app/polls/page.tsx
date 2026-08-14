@@ -70,13 +70,30 @@ const PRESET_COLORS = [
   "from-rose-500 to-pink-600"
 ];
 
-const INITIAL_POLLS: Poll[] = [];
+const DEFAULT_POLL: Poll = {
+  id: "poll-active-main",
+  question: "What is your primary AI coding model for rapid prototyping?",
+  category: "AI & Engineering",
+  options: [
+    { id: "opt-1", text: "Gemini 3.6 Flash / Pro (High Speed)", votes: 0, color: "from-blue-500 to-indigo-600" },
+    { id: "opt-2", text: "Claude 3.7 Sonnet (Thinking)", votes: 0, color: "from-[#3B82F6] to-cyan-400" },
+    { id: "opt-3", text: "GPT-4o / O3-Mini", votes: 0, color: "from-violet-500 to-purple-600" },
+    { id: "opt-4", text: "DeepSeek V3 / R1 Open Models", votes: 0, color: "from-emerald-400 to-teal-600" }
+  ],
+  totalVotes: 0,
+  createdAt: "Just now",
+  expiresInMinutes: 20,
+  isClosed: false,
+  userVotedOptionId: null
+};
+
+const INITIAL_POLLS: Poll[] = [DEFAULT_POLL];
 
 const INITIAL_ACTIVITIES: LiveActivity[] = [];
 
 export default function PollsPage() {
   const [polls, setPolls] = useState<Poll[]>(INITIAL_POLLS);
-  const [selectedPollId, setSelectedPollId] = useState<string>("poll-101");
+  const [selectedPollId, setSelectedPollId] = useState<string>("poll-active-main");
   const [activeTab, setActiveTab] = useState<"vote" | "manage" | "analytics" | "prompt">("vote");
   const [chartType, setChartType] = useState<"bar" | "donut" | "table">("bar");
   
