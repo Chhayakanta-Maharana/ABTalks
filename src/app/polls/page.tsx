@@ -115,17 +115,35 @@ export default function PollsPage() {
     return polls.find((p) => p.id === selectedPollId) || polls[0];
   }, [polls, selectedPollId]);
 
-  // Fetch polls from SQLite Database on mount
+  // Load polls on mount from localStorage AND database API
   useEffect(() => {
+    // 1. Immediate restore from localStorage
+    if (typeof window !== "undefined") {
+      try {
+        const localSaved = localStorage.getItem("abtalks_polls_v1");
+        if (localSaved) {
+          const parsed: Poll[] = JSON.parse(localSaved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setPolls(parsed);
+            setSelectedPollId(parsed[0].id);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to read polls from localStorage:", e);
+      }
+    }
+
+    // 2. Fetch from Database API
     async function loadPollsFromDB() {
       try {
         const res = await fetch("/api/polls");
         const data = await res.json();
-        if (data.success && data.polls) {
+        if (data.success && data.polls && data.polls.length > 0) {
           setPolls(data.polls);
-          if (data.polls.length > 0 && !selectedPollId) {
-            setSelectedPollId(data.polls[0].id);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("abtalks_polls_v1", JSON.stringify(data.polls));
           }
+          setSelectedPollId((prev) => (prev ? prev : data.polls[0].id));
         }
       } catch (err) {
         console.error("Failed to load polls from database:", err);
@@ -134,16 +152,28 @@ export default function PollsPage() {
     loadPollsFromDB();
   }, []);
 
+  // Helper to persist polls to localStorage
+  const savePollsToStorage = (updated: Poll[]) => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("abtalks_polls_v1", JSON.stringify(updated));
+        window.dispatchEvent(new Event("abtalks_polls_updated"));
+      } catch (e) {
+        console.error("Storage save failed:", e);
+      }
+    }
+  };
+
   // Leading option calculation
   const leadingOption = useMemo(() => {
-    if (!activePoll || activePoll.options.length === 0) return null;
+    if (!activePoll || !activePoll.options || activePoll.options.length === 0) return null;
     return [...activePoll.options].sort((a, b) => b.votes - a.votes)[0];
   }, [activePoll]);
 
   // Live Activity Auto-Tick Simulation
   useEffect(() => {
     const interval = setInterval(() => {
-      if (activePoll && !activePoll.isClosed) {
+      if (activePoll && !activePoll.isClosed && activePoll.options?.length > 0) {
         const locations = ["Berlin, DE", "Toronto, CA", "Seattle, US", "Singapore, SG", "Sydney, AU", "Mumbai, IN"];
         const randomLoc = locations[Math.floor(Math.random() * locations.length)];
         const randomOpt = activePoll.options[Math.floor(Math.random() * activePoll.options.length)];
@@ -169,7 +199,7 @@ export default function PollsPage() {
       if (activeTab !== "vote" || !activePoll || activePoll.isClosed) return;
       if (["1", "2", "3", "4"].includes(e.key)) {
         const index = parseInt(e.key, 10) - 1;
-        if (activePoll.options[index]) {
+        if (activePoll.options?.[index]) {
           handleVote(activePoll.options[index].id);
         }
       }
@@ -178,34 +208,35 @@ export default function PollsPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activePoll, activeTab]);
 
-  // Vote Handler (Persisted to Database)
+  // Vote Handler (Persisted to LocalStorage + Database API)
   const handleVote = async (optionId: string) => {
     if (!activePoll || activePoll.isClosed) return;
 
     const prevVotedId = activePoll.userVotedOptionId;
 
-    // Optimistic UI update
-    setPolls((prevPolls) =>
-      prevPolls.map((p) => {
-        if (p.id === activePoll.id) {
-          const updatedOptions = p.options.map((opt) => {
-            if (opt.id === optionId) return { ...opt, votes: opt.votes + 1 };
-            if (prevVotedId && opt.id === prevVotedId && prevVotedId !== optionId) {
-              return { ...opt, votes: Math.max(0, opt.votes - 1) };
-            }
-            return opt;
-          });
-          const totalV = updatedOptions.reduce((acc, o) => acc + o.votes, 0);
-          return {
-            ...p,
-            options: updatedOptions,
-            totalVotes: totalV,
-            userVotedOptionId: optionId
-          };
-        }
-        return p;
-      })
-    );
+    // Optimistic state and localStorage update
+    const updatedPolls = polls.map((p) => {
+      if (p.id === activePoll.id) {
+        const updatedOptions = p.options.map((opt) => {
+          if (opt.id === optionId) return { ...opt, votes: opt.votes + 1 };
+          if (prevVotedId && opt.id === prevVotedId && prevVotedId !== optionId) {
+            return { ...opt, votes: Math.max(0, opt.votes - 1) };
+          }
+          return opt;
+        });
+        const totalV = updatedOptions.reduce((acc, o) => acc + o.votes, 0);
+        return {
+          ...p,
+          options: updatedOptions,
+          totalVotes: totalV,
+          userVotedOptionId: optionId
+        };
+      }
+      return p;
+    });
+
+    setPolls(updatedPolls);
+    savePollsToStorage(updatedPolls);
 
     // Confetti effect burst
     setShowConfetti(true);
@@ -222,19 +253,13 @@ export default function PollsPage() {
       ...prev.slice(0, 5)
     ]);
 
-    // Persist vote in SQLite database via API
+    // Persist vote in database via API
     try {
-      const res = await fetch(`/api/polls/${activePoll.id}/vote`, {
+      await fetch(`/api/polls/${activePoll.id}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ optionId, prevOptionId: prevVotedId })
       });
-      const data = await res.json();
-      if (data.success && data.poll) {
-        setPolls((prevPolls) =>
-          prevPolls.map((p) => (p.id === data.poll.id ? { ...data.poll, userVotedOptionId: optionId } : p))
-        );
-      }
     } catch (err) {
       console.error("Failed to save vote in database:", err);
     }
@@ -244,36 +269,35 @@ export default function PollsPage() {
   const handleResetVote = () => {
     if (!activePoll || !activePoll.userVotedOptionId) return;
 
-    setPolls((prevPolls) =>
-      prevPolls.map((p) => {
-        if (p.id === activePoll.id && p.userVotedOptionId) {
-          const votedId = p.userVotedOptionId;
-          const updatedOptions = p.options.map((opt) =>
-            opt.id === votedId ? { ...opt, votes: Math.max(0, opt.votes - 1) } : opt
-          );
-          return {
-            ...p,
-            options: updatedOptions,
-            totalVotes: Math.max(0, p.totalVotes - 1),
-            userVotedOptionId: null
-          };
-        }
-        return p;
-      })
-    );
+    const votedId = activePoll.userVotedOptionId;
+    const updatedPolls = polls.map((p) => {
+      if (p.id === activePoll.id && p.userVotedOptionId) {
+        const updatedOptions = p.options.map((opt) =>
+          opt.id === votedId ? { ...opt, votes: Math.max(0, opt.votes - 1) } : opt
+        );
+        return {
+          ...p,
+          options: updatedOptions,
+          totalVotes: Math.max(0, p.totalVotes - 1),
+          userVotedOptionId: null
+        };
+      }
+      return p;
+    });
+
+    setPolls(updatedPolls);
+    savePollsToStorage(updatedPolls);
   };
 
-  // Toggle Poll Closed/Active status in Database
+  // Toggle Poll Closed/Active status
   const handleToggleClosePoll = async (pollId: string) => {
     const targetPoll = polls.find((p) => p.id === pollId);
     if (!targetPoll) return;
 
     const newClosedStatus = !targetPoll.isClosed;
-
-    // Optimistic UI update
-    setPolls((prev) =>
-      prev.map((p) => (p.id === pollId ? { ...p, isClosed: newClosedStatus } : p))
-    );
+    const updatedPolls = polls.map((p) => (p.id === pollId ? { ...p, isClosed: newClosedStatus } : p));
+    setPolls(updatedPolls);
+    savePollsToStorage(updatedPolls);
 
     try {
       await fetch(`/api/polls/${pollId}`, {
@@ -300,7 +324,7 @@ export default function PollsPage() {
     }
   };
 
-  // Create Custom Poll Submit Handler (Persisted to Database)
+  // Create Custom Poll Submit Handler (Immediate LocalStorage + DB API)
   const handleCreatePoll = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuestion.trim()) return;
@@ -308,33 +332,64 @@ export default function PollsPage() {
     const validOptions = newOptions.filter((o) => o.trim().length > 0);
     if (validOptions.length < 2) return;
 
+    const newPollId = `poll-${Date.now()}`;
+    const newCreatedPoll: Poll = {
+      id: newPollId,
+      question: newQuestion.trim(),
+      category: newCategory || "General",
+      options: validOptions.map((text, idx) => ({
+        id: `opt-${Date.now()}-${idx}`,
+        text: text.trim(),
+        votes: 0,
+        color: PRESET_COLORS[idx % PRESET_COLORS.length]
+      })),
+      totalVotes: 0,
+      createdAt: "Just now",
+      expiresInMinutes: newExpiry,
+      isClosed: false,
+      userVotedOptionId: null
+    };
+
+    // 1. Immediately update state and localStorage
+    const updatedPolls = [newCreatedPoll, ...polls];
+    setPolls(updatedPolls);
+    setSelectedPollId(newPollId);
+    savePollsToStorage(updatedPolls);
+
+    // 2. Switch tab to live voting
+    setActiveTab("vote");
+    setCreateSuccessToast(true);
+    setTimeout(() => setCreateSuccessToast(false), 3000);
+
+    // 3. Reset form
+    setNewQuestion("");
+    setNewOptions(["", "", "", ""]);
+
+    // 4. Background DB persistence
     try {
       const res = await fetch("/api/polls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: newQuestion.trim(),
-          category: newCategory || "General",
+          question: newCreatedPoll.question,
+          category: newCreatedPoll.category,
           options: validOptions,
           expiresInMinutes: newExpiry
         })
       });
-
       const data = await res.json();
       if (data.success && data.poll) {
-        setPolls([data.poll, ...polls]);
+        // Update temporary ID with DB ID if needed
+        setPolls((prev) => {
+          const finalPolls = prev.map((p) => (p.id === newPollId ? { ...data.poll, id: data.poll.id } : p));
+          savePollsToStorage(finalPolls);
+          return finalPolls;
+        });
         setSelectedPollId(data.poll.id);
       }
     } catch (err) {
-      console.error("Failed to create poll in database:", err);
+      console.warn("DB API background save:", err);
     }
-
-    // Reset Form
-    setNewQuestion("");
-    setNewOptions(["", "", "", ""]);
-    setCreateSuccessToast(true);
-    setActiveTab("vote");
-    setTimeout(() => setCreateSuccessToast(false), 3000);
   };
 
   // Copy Poll Link

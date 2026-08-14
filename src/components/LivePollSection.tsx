@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { BarChart3, Check, Trophy, ArrowRight, Sparkles, Activity, Users } from "lucide-react";
+import { Check, Trophy, ArrowRight, Sparkles, Activity, Users } from "lucide-react";
 
 interface PollOption {
   id: string;
@@ -11,31 +11,121 @@ interface PollOption {
   color: string;
 }
 
-const INITIAL_OPTIONS: PollOption[] = [
-  { id: "opt-1", text: "Gemini 3.6 Flash / Pro (High Speed)", votes: 12, color: "from-blue-500 to-indigo-600" },
-  { id: "opt-2", text: "Claude 3.7 Sonnet (Thinking)", votes: 8, color: "from-[#3B82F6] to-cyan-400" },
-  { id: "opt-3", text: "GPT-4o / O3-Mini", votes: 5, color: "from-violet-500 to-purple-600" },
-  { id: "opt-4", text: "DeepSeek V3 / R1 Open Models", votes: 4, color: "from-emerald-400 to-teal-600" }
-];
+interface Poll {
+  id: string;
+  question: string;
+  category: string;
+  options: PollOption[];
+  totalVotes: number;
+  createdAt: string;
+  expiresInMinutes: number;
+  isClosed: boolean;
+  userVotedOptionId?: string | null;
+}
+
+const DEFAULT_POLL: Poll = {
+  id: "poll-active-main",
+  question: "What is your primary AI coding model for rapid prototyping?",
+  category: "AI & Engineering",
+  options: [
+    { id: "opt-1", text: "Gemini 3.6 Flash / Pro (High Speed)", votes: 12, color: "from-blue-500 to-indigo-600" },
+    { id: "opt-2", text: "Claude 3.7 Sonnet (Thinking)", votes: 8, color: "from-[#3B82F6] to-cyan-400" },
+    { id: "opt-3", text: "GPT-4o / O3-Mini", votes: 5, color: "from-violet-500 to-purple-600" },
+    { id: "opt-4", text: "DeepSeek V3 / R1 Open Models", votes: 4, color: "from-emerald-400 to-teal-600" }
+  ],
+  totalVotes: 29,
+  createdAt: "Just now",
+  expiresInMinutes: 20,
+  isClosed: false,
+  userVotedOptionId: null
+};
 
 export default function LivePollSection() {
-  const [options, setOptions] = useState<PollOption[]>(INITIAL_OPTIONS);
+  const [currentPoll, setCurrentPoll] = useState<Poll>(DEFAULT_POLL);
   const [votedOptionId, setVotedOptionId] = useState<string | null>(null);
 
-  const totalVotes = options.reduce((acc, opt) => acc + opt.votes, 0);
-  const leadingOption = [...options].sort((a, b) => b.votes - a.votes)[0];
+  // Sync poll from localStorage on load & when updated
+  const syncPoll = () => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("abtalks_polls_v1");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCurrentPoll(parsed[0]);
+            setVotedOptionId(parsed[0].userVotedOptionId || null);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to sync poll in LivePollSection:", e);
+      }
+    }
+  };
 
-  const handleVote = (optionId: string) => {
-    if (votedOptionId === optionId) return;
+  useEffect(() => {
+    syncPoll();
 
-    setOptions((prev) =>
-      prev.map((opt) => {
-        if (opt.id === optionId) return { ...opt, votes: opt.votes + 1 };
-        if (votedOptionId && opt.id === votedOptionId) return { ...opt, votes: Math.max(0, opt.votes - 1) };
-        return opt;
-      })
-    );
+    // Listen for storage events across tabs or components
+    const handleUpdate = () => syncPoll();
+    window.addEventListener("abtalks_polls_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
+    return () => {
+      window.removeEventListener("abtalks_polls_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
+  const totalVotes = currentPoll.options?.reduce((acc, opt) => acc + opt.votes, 0) || 0;
+  const leadingOption = currentPoll.options ? [...currentPoll.options].sort((a, b) => b.votes - a.votes)[0] : null;
+
+  const handleVote = async (optionId: string) => {
+    if (votedOptionId === optionId || currentPoll.isClosed) return;
+
+    const prevVoted = votedOptionId;
+    const updatedOptions = (currentPoll.options || []).map((opt) => {
+      if (opt.id === optionId) return { ...opt, votes: opt.votes + 1 };
+      if (prevVoted && opt.id === prevVoted) return { ...opt, votes: Math.max(0, opt.votes - 1) };
+      return opt;
+    });
+
+    const newTotal = updatedOptions.reduce((acc, opt) => acc + opt.votes, 0);
+    const updatedPoll: Poll = {
+      ...currentPoll,
+      options: updatedOptions,
+      totalVotes: newTotal,
+      userVotedOptionId: optionId
+    };
+
+    setCurrentPoll(updatedPoll);
     setVotedOptionId(optionId);
+
+    // Save to localStorage
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("abtalks_polls_v1");
+        let allPolls: Poll[] = saved ? JSON.parse(saved) : [];
+        allPolls = allPolls.map((p) => (p.id === updatedPoll.id ? updatedPoll : p));
+        if (!allPolls.find((p) => p.id === updatedPoll.id)) {
+          allPolls.unshift(updatedPoll);
+        }
+        localStorage.setItem("abtalks_polls_v1", JSON.stringify(allPolls));
+        window.dispatchEvent(new Event("abtalks_polls_updated"));
+      } catch (e) {
+        console.error("Storage error:", e);
+      }
+    }
+
+    // Persist to API
+    try {
+      await fetch(`/api/polls/${currentPoll.id}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ optionId, prevOptionId: prevVoted })
+      });
+    } catch (e) {
+      console.warn("API vote sync error:", e);
+    }
   };
 
   return (
@@ -55,7 +145,7 @@ export default function LivePollSection() {
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white">
-              What is your primary AI coding model for rapid prototyping?
+              {currentPoll.question}
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
               Cast your vote below to watch the live animated percentage bar chart update in real-time.
@@ -73,7 +163,7 @@ export default function LivePollSection() {
 
         {/* Interactive Bar Chart Options */}
         <div className="space-y-4 relative z-10">
-          {options.map((option, idx) => {
+          {(currentPoll.options || []).map((option, idx) => {
             const percentage = totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0;
             const isVoted = votedOptionId === option.id;
             const isLeading = leadingOption?.id === option.id && option.votes > 0;
@@ -90,7 +180,7 @@ export default function LivePollSection() {
               >
                 {/* Background Fill Bar */}
                 <div
-                  className={`absolute top-0 bottom-0 left-0 bg-gradient-to-r ${option.color} opacity-20 transition-all duration-700 ease-out`}
+                  className={`absolute top-0 bottom-0 left-0 bg-gradient-to-r ${option.color || "from-blue-500 to-indigo-600"} opacity-20 transition-all duration-700 ease-out`}
                   style={{ width: `${percentage}%` }}
                 />
 
@@ -126,7 +216,7 @@ export default function LivePollSection() {
                 {/* Progress bar */}
                 <div className="relative z-10 w-full h-1.5 bg-slate-950/80 rounded-full mt-3 overflow-hidden">
                   <div
-                    className={`h-full bg-gradient-to-r ${option.color} transition-all duration-1000 ease-out rounded-full`}
+                    className={`h-full bg-gradient-to-r ${option.color || "from-blue-500 to-indigo-600"} transition-all duration-1000 ease-out rounded-full`}
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
